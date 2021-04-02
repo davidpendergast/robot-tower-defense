@@ -1,0 +1,8 @@
+*__pycache__*
+*.xcf
+.idea
+*.mp4
+dist/
+*.wav
+*.lnk
+*.DS_Store
