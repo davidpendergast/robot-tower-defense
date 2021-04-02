@@ -2,4 +2,4 @@
 
 what an exciting and fresh concept
 
-![ascii](gifs/ascii_rendering.gif)
+![ascii](gifs/ascii-rendering.gif)
