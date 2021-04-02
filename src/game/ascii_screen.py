@@ -10,14 +10,26 @@ class AsciiScreen:
         self._bg_char = bg
         self._bg_color = bg_color
         self._anim_period = anim_period
-        self.w = w
-        self.h = h
+        self._w = w
+        self._h = h
 
     def clear(self):
         self._char_map.clear()
 
+    def w(self):
+        return self._w
+
+    def h(self):
+        return self._h
+
+    def size(self):
+        return self.w(), self.h()
+
+    def get_rect(self):
+        return [0, 0, self.w(), self.h()]
+
     def is_valid(self, xy):
-        return 0 <= xy[0] < self.w and 0 <= xy[1] < self.h
+        return 0 <= xy[0] < self.w() and 0 <= xy[1] < self.h()
 
     def add(self, xy, char, color=None):
         if color is None:
@@ -45,7 +57,7 @@ class AsciiScreen:
     def to_string(self, tick=0, rect=None):
         """returns: TextBuilder"""
         if rect is None:
-            rect = [0, 0, self.w, self.h]
+            rect = self.get_rect()
         builder = sprites.TextBuilder()
         for y in range(rect[1], rect[1] + rect[3]):
             if y > 0:

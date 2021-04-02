@@ -1,23 +1,25 @@
 
 import os.path
+import src.game.const as const
 
-name_of_game = "Demo Game"
+name_of_game = "Robot Tower Defense"
 version = "1.0.0"
 
 
 """ Display """
-default_window_size = (800, 600)  # size of window when the game starts.
-minimum_window_size = (250, 150)  # if the window is smaller than this, it will begin cropping the picture.
+minimum_window_size = (9 * const.W, 16 * const.H)   # if the window is smaller than this, it will begin cropping the picture.
+default_window_size = (2 * minimum_window_size[0],  # size of window when the game starts.
+                       2 * minimum_window_size[1])
 
 allow_fullscreen = True
 allow_window_resize = True
 
-clear_color = (0.66, 0.66, 0.66)
+clear_color = (0, 0, 0)
 
 
 """ Pixel Scaling """
-optimal_window_size = (640, 300)
-optimal_pixel_scale = 2  # how many screen pixels each "game pixel" will take up at the optimal window size.
+optimal_window_size = minimum_window_size
+optimal_pixel_scale = 1  # how many screen pixels each "game pixel" will take up at the optimal window size.
 
 auto_resize_pixel_scale = True  # whether to automatically update the pixel scale as the window grows and shrinks.
 minimum_auto_pixel_scale = 1

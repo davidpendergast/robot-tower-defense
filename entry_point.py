@@ -4,14 +4,14 @@ import os
 import pathlib
 
 import configs
-import src.example.demogame
+import src.game.robots as robots
 
 
 """
 The main entry point.
 """
 
-game_class = src.example.demogame.DemoGame  # <--- change this to your actual game class
+game_class = robots.RobotTowerDefense
 
 
 def _get_crash_report_file_name():
