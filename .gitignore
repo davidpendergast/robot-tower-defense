@@ -6,3 +6,4 @@ dist/
 *.wav
 *.lnk
 *.DS_Store
+logs/*
