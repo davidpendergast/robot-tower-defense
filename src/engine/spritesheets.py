@@ -52,6 +52,15 @@ class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
         SpriteSheet.__init__(self, DefaultFont.SHEET_ID, "assets/font.png")
         self._sprite_lookup = {}  # char -> sprite rect on atlas
 
+        self.ordered_chars = " ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼" + \
+                             " !\"#$%&'()*+,-./0123456789:;<=>?"+ \
+                             "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_" + \
+                             "`abcdefghijklmnopqrstuvwxyz{|}~⌂" + \
+                             "ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒ" + \
+                             "áíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐" + \
+                             "└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀" + \
+                             "αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ "
+
         self._char_mappings = {
             "→": chr(16),
             "←": chr(17),
@@ -81,7 +90,7 @@ class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
         char_h = round(sheet.get_height() / 8)
         for y in range(0, 8):
             for x in range(0, 32):
-                c = chr(y * 32 + x)
+                c = self.ordered_chars[y * 32 + x]
                 self._sprite_lookup[c] = sprites.ImageModel(x * char_w, y * char_h, char_w, char_h, offset=start_pos)
 
 

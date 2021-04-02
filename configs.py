@@ -26,7 +26,7 @@ minimum_auto_pixel_scale = 1
 
 
 """ FPS """
-target_fps = 60
+target_fps = 30
 precise_fps = False
 
 

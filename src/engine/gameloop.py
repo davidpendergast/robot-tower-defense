@@ -69,6 +69,8 @@ class _GameLoop:
         px_scale = self._calc_pixel_scale(window.get_instance().get_display_size())
         render_eng.set_pixel_scale(px_scale)
 
+        self._game.initialize()
+
     def _calc_pixel_scale(self, screen_size):
         if configs.auto_resize_pixel_scale:
             screen_w, screen_h = screen_size

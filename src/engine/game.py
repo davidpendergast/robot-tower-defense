@@ -7,6 +7,9 @@ class Game:
     def __init__(self):
         pass
 
+    def initialize(self):
+        pass
+
     def create_sheets(self):
         raise NotImplementedError()
 

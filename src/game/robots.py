@@ -2,11 +2,16 @@
 import src.game.gamestate as gamestate
 import src.engine.layers as layers
 import src.game.const as const
+import src.engine.game as game
 
 
-class RobotTowerDefense:
+class RobotTowerDefense(game.Game):
 
     def __init__(self):
+        super().__init__()
+        self.gamestate = None
+
+    def initialize(self):
         self.gamestate = gamestate.GameState()
 
     def create_sheets(self):

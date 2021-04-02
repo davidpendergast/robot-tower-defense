@@ -54,7 +54,7 @@ class AsciiScreen:
         else:
             return None
 
-    def to_string(self, tick=0, rect=None):
+    def get_all(self, tick=0, rect=None):
         """returns: TextBuilder"""
         if rect is None:
             rect = self.get_rect()
@@ -64,14 +64,20 @@ class AsciiScreen:
                 builder.add("\n")
             for x in range(rect[0], rect[0] + rect[2]):
                 item = self.item_at((x, y), tick=tick)
-                if item is not None:
-                    c, color = item
-                    builder.add(c, color=color)
+                c, color = item
+                builder.add(c, color=color)
 
         return builder
 
+    def get_row(self, y, tick=0):
+        builder = sprites.TextBuilder()
+        for x in range(0, self.w()):
+            item = self.item_at((x, y), tick=tick)
+            builder.add(item[0], color=item[1])
+        return builder
+
     def pretty_print(self, tick=0, rect=None):
-        my_str = self.to_string(tick=tick, rect=rect)
+        my_str = self.get_all(tick=tick, rect=rect)
         print(my_str.text)
 
 
