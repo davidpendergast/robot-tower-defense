@@ -11,6 +11,7 @@ import configs
 import sys
 import src.engine.inputs as inputs
 import src.utils.textutils as textutils
+import src.game.world as world
 
 
 class GameState:
@@ -175,6 +176,21 @@ class InGameScene(Scene):
         super().__init__(state)
         self.shop_rect = [const.W - 16, 0, 16, const.H]
         self.info_rect = [0, const.H - 6, const.W - self.shop_rect[2], 6]
+
+        self._paused = False
+        self.cash = 200
+
+        self._world = world.generate_world(const.W - self.shop_rect[2] - 2,
+                                           const.H - self.info_rect[3] - 2)
+
+    def is_paused(self):
+        return self._paused
+
+    def set_paused(self, val):
+        self._paused = val
+
+    def update(self):
+        self._world.update_all(self)
 
     def draw(self, screen):
         self._draw_borders(screen)
