@@ -31,6 +31,6 @@ precise_fps = False
 
 
 """ Miscellaneous """
-do_crash_reporting = True  # whether to produce a crash file when the program exits via an exception.
 is_dev = os.path.exists(".gitignore")  # yikes
+do_crash_reporting = not is_dev  # whether to produce a crash file when the program exits via an exception.
 

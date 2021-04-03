@@ -11,7 +11,7 @@ import configs
 import sys
 import src.engine.inputs as inputs
 import src.utils.textutils as textutils
-import src.game.world as world
+import src.game.worlds as worlds
 
 
 class GameState:
@@ -178,9 +178,10 @@ class InGameScene(Scene):
         self.info_rect = [0, const.H - 6, const.W - self.shop_rect[2], 6]
 
         self._paused = False
+        self._playback_speed = 1  # larger = slower
         self.cash = 200
 
-        self._world = world.generate_world(const.W - self.shop_rect[2] - 2,
+        self._world = worlds.generate_world(const.W - self.shop_rect[2] - 2,
                                            const.H - self.info_rect[3] - 2)
 
     def is_paused(self):
@@ -189,11 +190,18 @@ class InGameScene(Scene):
     def set_paused(self, val):
         self._paused = val
 
+    def should_skip_this_frame(self):
+        return self.state.scene_ticks % self._playback_speed != 0
+
     def update(self):
         self._world.update_all(self)
 
     def draw(self, screen):
+        self._world.draw(screen, (1, 1), self)
         self._draw_borders(screen)
+
+    def get_view_mode(self):
+        return worlds.ViewModes.NORMAL
 
     def _draw_borders(self, screen: ascii_screen.AsciiScreen):
         color = colors.DARK_GRAY

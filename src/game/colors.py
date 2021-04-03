@@ -22,6 +22,13 @@ RED = (1, 0.333, 0.333)
 YELLOW = (1, 1, 0.333)
 GREEN = (0.333, 1, 0.333)
 BLUE = (0.333, 0.333, 1)
+PURPLE = (1, 0.333, 1)
+
+DARK_RED = (1, 0.666, 0.666)
+DARK_YELLOW = (1, 1, 0.666)
+DARK_GREEN = (0.666, 1, 0.666)
+DARK_BLUE = (0.666, 0.666, 1)
+DARK_PURPLE = (1, 0.666, 1)
 
 
 def rand_color(seed=None):
