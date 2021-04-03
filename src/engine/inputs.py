@@ -13,7 +13,7 @@ def create_instance():
         raise ValueError("There is already an InputState initialized.")
 
 
-def get_instance():
+def get_instance() -> 'InputState':
     return _INSTANCE
 
 

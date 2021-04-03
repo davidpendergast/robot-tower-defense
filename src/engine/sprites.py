@@ -721,6 +721,23 @@ class TextBuilder:
     def addLine(self, new_text, color=None):
         return self.add(new_text + "\n", color=color)
 
+    def get_dimensions(self):
+        if len(self.text) == 0:
+            return (0, 0)
+        else:
+            max_w = 0
+            max_h = 0
+            w = 0
+            for c in self.text:
+                if c == "\n":
+                    max_w = max(max_w, w)
+                    max_h += 1
+                    w = 0
+                else:
+                    w += 1
+            max_w = max(max_w, w)
+            return (max_w, max_h)
+
     def __repr__(self):
         return "TextBuilder({}, {})".format(self.text, self.colors)
 

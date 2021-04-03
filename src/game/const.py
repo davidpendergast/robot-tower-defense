@@ -1,6 +1,4 @@
 
-import re
-
 W = 60
 H = 20
 SIZE = (W, H)

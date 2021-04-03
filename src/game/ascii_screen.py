@@ -31,16 +31,38 @@ class AsciiScreen:
     def is_valid(self, xy):
         return 0 <= xy[0] < self.w() and 0 <= xy[1] < self.h()
 
-    def add(self, xy, char, color=None):
+    def add(self, xy, char, color=None, replace=False):
         if color is None:
             color = self._bg_color
         if not self.is_valid(xy):
             print("WARN: {} is OOB".format(xy))
             return
-        if xy not in self._char_map:
+        if xy not in self._char_map or replace:
             self._char_map[xy] = [(char, color)]
         else:
             self._char_map[xy].append((char, color))
+
+    def add_text(self, xy, text, color=None, replace=False):
+        if isinstance(text, sprites.TextBuilder):
+            pos = xy
+            i = 0
+            for c in text.text:
+                color = text.colors[i] if i in text.colors else None
+                if c == "\n":
+                    pos = (xy[0], pos[1] + 1)
+                else:
+                    self.add(pos, c, color=color, replace=replace)
+                    pos = (pos[0] + 1, pos[1])
+                i += 1
+        else:
+            # holy code duplication batman
+            pos = xy
+            for c in text:
+                if c == "\n":
+                    pos = (xy[0], pos[1] + 1)
+                else:
+                    self.add(pos, c, color=color, replace=replace)
+                    pos = (pos[0] + 1, pos[1])
 
     def item_at(self, xy, tick=0, include_bg=True):
         """returns: (char, color) or None"""

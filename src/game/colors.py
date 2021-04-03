@@ -18,6 +18,11 @@ for r in c:
             if min(r, g, b) > 0.5:
                 ALL_BRIGHT_COLORS.append(rgb)
 
+RED = (1, 0.333, 0.333)
+YELLOW = (1, 1, 0.333)
+GREEN = (0.333, 1, 0.333)
+BLUE = (0.333, 0.333, 1)
+
 
 def rand_color(seed=None):
     if seed is not None:
