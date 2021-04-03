@@ -10,6 +10,7 @@ import math
 import configs
 import sys
 import src.engine.inputs as inputs
+import src.utils.textutils as textutils
 
 
 class GameState:
@@ -26,7 +27,8 @@ class GameState:
         self.active_scene = TitleScene(self)
         self.next_scene = None
 
-        self.tick = 0
+        self.scene_ticks = 0
+        self.global_ticks = 0
 
     def get_active_scene(self):
         return self.active_scene
@@ -38,12 +40,14 @@ class GameState:
         if self.next_scene is not None:
             self.active_scene = self.next_scene
             self.next_scene = None
+            self.scene_ticks = 0
 
         self.active_scene.update()
 
         self._update_screen()
         self._update_sprites()
-        self.tick += 1
+        self.global_ticks += 1
+        self.scene_ticks += 1
 
     def _update_screen(self):
         self.screen.clear()
@@ -56,7 +60,7 @@ class GameState:
         font_lookup = spritesheets.get_instance().get_sheet(spritesheets.DefaultFont.SHEET_ID)
         for y in range(0, const.H):
             for x in range(0, const.W):
-                character, color = self.screen.item_at((x, y), tick=self.tick)
+                character, color = self.screen.item_at((x, y), tick=self.scene_ticks)
                 pos = (root_xy[0] + x * self.char_size[0],
                        root_xy[1] + y * self.char_size[1])
                 if self.char_sprites[x][y] is None:
@@ -124,18 +128,22 @@ class TitleScene(Scene):
         msg = "Press Any Key to Start"
         xy2 = ((const.W - len(msg)) // 2, xy[1] + 1)
 
-        screen.add_text(xy, game_name, color=colors.rand_color(self.state.tick // 30))
-        screen.add_text(xy2, msg, color=colors.rand_color(5 + self.state.tick // 30))
+        screen.add_text(xy, game_name, color=colors.rand_color(self.state.scene_ticks // 30))
+        screen.add_text(xy2, msg, color=colors.rand_color(5 + self.state.scene_ticks // 30))
+
+        rect_size = (max(len(game_name), len(msg)) + 2, 4)
+        rect_text = textutils.ascii_rect(rect_size, color=colors.LIGHT_GRAY)
+        screen.add_text((xy[0]-1, xy[1]-1), rect_text, ignore=" ")
 
 
 class InstructionsScene(Scene):
 
     def __init__(self, state):
         super().__init__(state)
-        self.instructions = sprites.TextBuilder()
+        self.instructions = sprites.TextBuilder(color=colors.LIGHT_GRAY)
         self.instructions.addLine("Instructions:")
         self.instructions.addLine("1. Use the mouse to buy units.")
-        self.instructions.add("2. You cannot build things directly,\n   only Build-Bots (")
+        self.instructions.add("2. You cannot build things directly;\n   only Build-Bots (")
         self.instructions.add("☻", color=colors.YELLOW)
         self.instructions.addLine(") can build!")
         self.instructions.add("3. Use robots, towers, and walls to protect your ")
@@ -143,10 +151,57 @@ class InstructionsScene(Scene):
         self.instructions.addLine("s!")
         self.instructions.add("4. When all ")
         self.instructions.add("♥", color=colors.RED)
-        self.instructions.addLine("s are destroyed, the game is over.\n\nSee how long you can last.")
+        self.instructions.addLine("s are destroyed, the game is over.\n")
+        self.instructions.add("             See how long you can last.")
 
         self.text_dims = self.instructions.get_dimensions()
+
+    def update(self):
+        if inputs.get_instance().was_pressed(pygame.K_ESCAPE):
+            self.state.set_next_scene(TitleScene(self.state))
+        elif self.state.scene_ticks > 7 and (inputs.get_instance().was_anything_pressed()
+                                             or inputs.get_instance().mouse_was_pressed(1)
+                                             or inputs.get_instance().mouse_was_pressed(3)):
+            self.state.set_next_scene(InGameScene(self.state))
 
     def draw(self, screen):
         xy = ((const.W - self.text_dims[0]) // 2, (const.H - self.text_dims[1]) // 2)
         screen.add_text(xy, self.instructions)
+
+
+class InGameScene(Scene):
+
+    def __init__(self, state):
+        super().__init__(state)
+        self.shop_rect = [const.W - 16, 0, 16, const.H]
+        self.info_rect = [0, const.H - 6, const.W - self.shop_rect[2], 6]
+
+    def draw(self, screen):
+        self._draw_borders(screen)
+
+    def _draw_borders(self, screen: ascii_screen.AsciiScreen):
+        color = colors.DARK_GRAY
+        screen.add((0, 0), textutils.DOUBLE[0], color=color, replace=True)
+        screen.add((const.W - 1, 0), textutils.DOUBLE[2], color=color, replace=True)
+        screen.add((0, const.H - 1), textutils.DOUBLE[6], color=color, replace=True)
+        screen.add((const.W - 1, const.H - 1), textutils.DOUBLE[8], color=color, replace=True)
+        for x in range(1, const.W - 1):
+            if x == const.W - self.shop_rect[2]:
+                screen.add((x, 0), "╦", color=color, replace=True)
+                screen.add((x, const.H - 1), "╩", color=color, replace=True)
+            else:
+                screen.add((x, 0), textutils.DOUBLE[1], color=color, replace=True)
+                screen.add((x, const.H - 1), textutils.DOUBLE[1], color=color, replace=True)
+
+        for y in range(1, const.H - 1):
+            if y == const.H - self.info_rect[3]:
+                screen.add((0, y), "╠", color=color, replace=True)
+                screen.add((const.W - self.shop_rect[2], y), "╣", color=color, replace=True)
+                screen.add((const.W - 1, y), textutils.DOUBLE[3], color=color, replace=True)
+            else:
+                screen.add((0, y), textutils.DOUBLE[3], color=color, replace=True)
+                screen.add((const.W - 1, y), textutils.DOUBLE[3], color=color, replace=True)
+                screen.add((const.W - self.shop_rect[2], y), textutils.DOUBLE[3], color=color, replace=True)
+
+        for x in range(1, const.W - self.shop_rect[2]):
+            screen.add((x, const.H - self.info_rect[3]), textutils.DOUBLE[1], color=color, replace=True)

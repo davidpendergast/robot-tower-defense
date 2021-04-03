@@ -707,11 +707,14 @@ class TextSprite(MultiSprite):
 
 class TextBuilder:
 
-    def __init__(self):
+    def __init__(self, color=None):
         self.text = ""
         self.colors = {}
+        self.default_color = color
 
     def add(self, new_text, color=None):
+        if color is None:
+            color = self.default_color
         if color is not None:
             for i in range(0, len(new_text)):
                 self.colors[len(self.text) + i] = color

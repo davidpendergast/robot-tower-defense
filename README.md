@@ -1,5 +1,6 @@
 # Robot Tower Defense
 
-what an exciting and fresh concept
+what a cool concept
 
-![ascii](gifs/ascii-rendering.gif)
+![menus](gifs/02-menus.gif)
+![ascii](gifs/01-ascii-rendering.gif)
