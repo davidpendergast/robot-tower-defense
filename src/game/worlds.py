@@ -87,7 +87,7 @@ class World:
         if entity in self.positions:
             old_pos = self.positions[entity]
             del self.positions[entity]
-            self._remove_from_cell(old_pos)
+            self._remove_from_cell(entity, old_pos)
 
         for cache_key in self._caches:
             if entity in self._caches[cache_key][1]:
@@ -217,6 +217,10 @@ class StatTypes:
 
     APS = StatType("Speed", lambda v: "Speed: {}/sec".format(v), colors.LIGHT_GRAY, 2)
     DAMAGE = StatType("Damage", lambda v: "Damage: {}".format(v), colors.LIGHT_GRAY, 10)
+
+    BONUS_DAMAGE = StatType("Bonus Damage", lambda v: "Bonus Damage: {}".format(v), colors.LIGHT_GRAY, 0)
+    RAMPAGE = StatType("Rampage", lambda v: "Damage on Hit: {}".format(v), colors.RED, 0)
+
     RANGE = StatType("Range", lambda v: "Range: {}".format(v), colors.BLUE, 1.5)
     ARMOR = StatType("Armor", lambda v: "Armor: {}".format(v), colors.MID_GRAY, 0)
 
@@ -287,11 +291,12 @@ class Entity:
         else:
             return 0
 
-    def ticks_per_action(self, actions_per_sec):
-        if actions_per_sec <= 0:
+    def ticks_per_action(self):
+        aps = self.get_stat_value(StatTypes.APS)
+        if aps <= 0:
             return 999
         else:
-            return configs.target_fps / actions_per_sec
+            return configs.target_fps / aps
 
     def is_selectable(self):
         return self.is_tower()
@@ -301,6 +306,9 @@ class Entity:
 
     def can_show_hp(self):
         return not self.is_enemy() and not self.is_decoration()
+
+    def get_base_color(self):
+        return self.base_color
 
     def get_color(self, mode=ViewModes.NORMAL):
         if mode == ViewModes.SHOW_HP and self.can_show_hp():
@@ -314,15 +322,46 @@ class Entity:
                 return util.Utils.linear_interp(lower, mid, pcnt / 0.5)
         else:
             if self.perturbed_countdown <= 0 or self.perturbed_color is None:
-                return self.base_color
+                return self.get_base_color()
             else:
-                a = util.Utils.bound(1 - self.perturbed_countdown / self.perturbed_duration, 0, 1)
-                return util.Utils.linear_interp(self.base_color, self.perturbed_color, a)
+                a = util.Utils.bound(self.perturbed_countdown / self.perturbed_duration, 0, 1)
+                return util.Utils.linear_interp(self.get_base_color(), self.perturbed_color, a)
 
     def perturb_color(self, new_color, duration):
         self.perturbed_color = new_color
         self.perturbed_countdown = duration
         self.perturbed_duration = duration
+
+    def calc_damage_against(self, other):
+        my_dmg = self.get_stat_value(StatTypes.DAMAGE)
+        my_dmg += self.get_stat_value(StatTypes.BONUS_DAMAGE)
+
+        other_def = other.get_stat_value(StatTypes.ARMOR)
+
+        return max(0, my_dmg - other_def)
+
+    def give_damage_to(self, other):
+        dmg = self.calc_damage_against(other)
+        if dmg > 0:
+            other.take_damage_from(dmg, self)
+
+            heal_amt = int(dmg * self.get_stat_value(StatTypes.VAMPRISM) / 100)
+            self.set_hp(self.get_hp() + heal_amt)
+            # TODO noise for healing
+
+        ramp = self.get_stat_value(StatTypes.RAMPAGE)
+        self.stats[StatTypes.BONUS_DAMAGE] += ramp
+
+    def take_damage_from(self, damage, other):
+        self.set_hp(self.get_hp() - damage)
+        if damage > 0:
+            self.perturb_color(other.get_color(), 10)
+            # TODO noise for taking damage
+
+    def get_aggression_discount(self):
+        """More aggressive = less cost to attack"""
+        aggro = self.get_stat_value(StatTypes.AGGRESSION)
+        return util.Utils.bound(1 - (aggro / 10), 0, 2)
 
     def on_death(self, world, scene):
         pass

@@ -163,6 +163,8 @@ class InstructionsScene(Scene):
 
     def __init__(self, state):
         super().__init__(state)
+        import src.game.units as units
+        crystal = units.HeartTower()
         self.instructions = sprites.TextBuilder(color=colors.LIGHT_GRAY)
         self.instructions.addLine("Instructions:")
         self.instructions.addLine("1. Use the mouse to buy units.")
@@ -170,10 +172,10 @@ class InstructionsScene(Scene):
         self.instructions.add("☻", color=colors.YELLOW)
         self.instructions.addLine(") can build!")
         self.instructions.add("3. Use robots, towers, and walls to protect your ")
-        self.instructions.add("♥", color=colors.RED)
+        self.instructions.add(crystal.get_char(), color=crystal.get_base_color())
         self.instructions.addLine("s!")
         self.instructions.add("4. When all ")
-        self.instructions.add("♥", color=colors.RED)
+        self.instructions.add(crystal.get_char(), color=crystal.get_base_color())
         self.instructions.addLine("s are destroyed, the game is over.\n")
         self.instructions.add("             See how long you can last.")
 

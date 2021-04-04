@@ -1,7 +1,10 @@
 import src.game.worlds as worlds
 import src.game.colors as colors
 import src.utils.util as util
+import configs
 import random
+import math
+import heapq
 
 
 class Tower(worlds.Entity):
@@ -23,9 +26,14 @@ class Tower(worlds.Entity):
 class HeartTower(Tower):
 
     def __init__(self):
-        super().__init__("♥", colors.RED, "Energy Crystal",
+        super().__init__("♦", colors.CYAN, "Energy Crystal",
                          "Protect this tower at all costs!\n" +
                          "Gold must be delivered here.")
+
+    def get_base_color(self):
+        pcnt_hp = util.Utils.bound(self.get_hp() / self.get_max_hp(), 0, 1)
+        dark = colors.BLACK
+        return util.Utils.linear_interp(self.base_color, dark, (1 - pcnt_hp))
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -55,7 +63,8 @@ class RobotSpawner(Tower):
 
         if self._my_robot is None or self._my_robot.is_dead():
             self.build_countup += 1
-            ticks_per_build = self.ticks_per_action(self.get_stat_value(worlds.StatTypes.BUILD_SPEED))
+            actions_per_build = configs.target_fps / self.get_stat_value(worlds.StatTypes.BUILD_SPEED)
+            ticks_per_build = self.ticks_per_action()
             if self.build_countup >= ticks_per_build:
                 self._my_robot = self.robot_producer()
                 world.set_pos(self._my_robot, my_xy)
@@ -164,10 +173,24 @@ class Enemy(Agent):
         super().__init__(character, color, name, description)
 
     def act(self, world, state):
+        heart_pts = [world.get_pos(h) for h in world.all_hearts()]
+        if len(heart_pts) > 0:
+            best_path = find_best_path_to(self, world, heart_pts,
+                                          or_adjacent_to=False,
+                                          action_provider=lambda xy: AttackAndMoveAction(xy))
+            if best_path is not None and len(best_path) > 0:
+                best_path[0].perform(self, world)
+                return
         self.wander(world, state)
 
     def get_base_stats(self):
-        return self._base_stats
+        res = {}
+        for s in self._base_stats:
+            res[s] = self._base_stats[s]
+        for s in worlds.ALL_STAT_TYPES:
+            if s not in res:
+                res[s] = s.default_val
+        return res
 
     def is_enemy(self):
         return True
@@ -334,6 +357,177 @@ class EnemyFactory:
             res.append(Enemy(name, colors.RED, stats, "Enemy", "{} known only as \"{}\".".format(adj, name)))
 
         return res
+
+
+class Action:
+
+    def __init__(self, xy):
+        self.xy = xy
+
+        # used to help calculate action sequences
+        self.prev = None
+        self.prev_cost = 0
+
+    def get_xy(self):
+        return self.xy
+
+    def get_name(self):
+        raise NotImplementedError()
+
+    def get_cost(self, entity, world):
+        """Roughly how many ticks it will take the actor to complete this action.
+           Used for calculating sequences of actions."""
+        return 0
+
+    def get_total_cost(self, entity, world):
+        return self.prev_cost + self.get_cost(entity, world)
+
+    def is_possible(self, entity, world):
+        return True
+
+    def perform(self, entity, world):
+        """returns: True if action was completed successfully.
+                    False if action failed.
+                    None if action is in progress."""
+        raise NotImplementedError()
+
+
+class MoveToAction(Action):
+
+    def __init__(self, xy):
+        super().__init__(xy)
+
+    def get_name(self):
+        return "MoveToAction(xy={})".format(self.xy)
+
+    def get_cost(self, entity, world):
+        return entity.ticks_per_action()
+
+    def is_possible(self, entity, world):
+        return world.can_move_to(entity, self.xy)
+
+    def perform(self, entity, world):
+        """returns: True if action was completed successfully.
+                    False if action failed.
+                    None if action is in progress."""
+        cur_xy = world.get_pos(entity)
+        if util.Utils.dist_manhattan(cur_xy, self.xy) <= 1 and world.can_move_to(entity, self.xy):
+            world.set_pos(entity, self.xy)
+            return True
+        else:
+            return False
+
+
+class AttackAndMoveAction(MoveToAction):
+
+    def __init__(self, xy):
+        super().__init__(xy)
+
+    def get_name(self):
+        return "AttackAndMoveAction(xy={})".format(self.xy)
+
+    def get_cost(self, entity, world):
+        ticks_per_action = entity.ticks_per_action()
+        res = 0
+        for e in world.all_entities_in_cell(self.xy, cond=lambda e: e.get_solidity() != 0):
+            cur_hp = e.get_stat_value(worlds.StatTypes.HP)
+            dmg = entity.calc_damage_against(e)
+            ramp = entity.get_stat_value(worlds.StatTypes.RAMPAGE)
+
+            # calculating how many attacks it'll take to kill this thing
+            if ramp <= 0 and dmg == 0:
+                x = cur_hp * 999  # looks like we can't break it
+            elif ramp == 0:
+                x = math.ceil(cur_hp / dmg)
+            else:
+                a = (ramp / 2)
+                b = (dmg - ramp / 2)
+                c = -cur_hp
+                x = (-b + math.sqrt(b*b - 4*a*c)) / 2*a
+
+            aggression_mult = e.get_aggression_discount()
+
+            res += int(math.ceil(x) * ticks_per_action * aggression_mult)
+
+        return res + super().get_cost(entity, world)  # cost to move afterwards
+
+    def is_possible(self, entity, world):
+        return True
+
+    def perform(self, entity, world):
+        cur_xy = world.get_pos(entity)
+        if util.Utils.dist_manhattan(cur_xy, self.xy) <= 1:
+            if world.can_move_to(entity, self.xy):
+                return super().perform(entity, world)
+            else:
+                ents_blocking = [e for e in world.all_entities_in_cell(self.xy, cond=lambda e: e.get_solidity() != 0)]
+                if len(ents_blocking) == 0:
+                    # can't move there and there's nothing there?
+                    # Must be at the edge of the world or something.
+                    return False
+                else:
+                    to_attack = ents_blocking[int(random.random() * len(ents_blocking))]
+                    entity.give_damage_to(to_attack)
+                    return None
+        else:
+            return False
+
+
+def find_best_path_to(entity, world, endpoints, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
+    final_action = _find_best_path_helper(entity, world, endpoints, or_adjacent_to=or_adjacent_to,
+                                          action_provider=action_provider)
+
+    if final_action is None:
+        return None
+    else:
+        res = [final_action]
+        action = final_action.prev
+        while action is not None:
+            res.append(action)
+            action = action.prev
+        res.reverse()
+        return res
+
+
+def _find_best_path_helper(entity, world, endpoints, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
+    if len(endpoints) == 0:
+        raise ValueError("endpoints is empty")
+    endpoints = set(endpoints)
+    if or_adjacent_to:
+        for pt in endpoints:
+            for n in util.Utils.neighbors(pt[0], pt[1]):
+                endpoints.add(n)
+    start_xy = world.get_pos(entity)
+    seen_pts = set()
+    seen_pts.add(start_xy)
+
+    q = []
+    i = 0  # tiebreaker
+    for n in util.Utils.rand_neighbors(start_xy):
+        seen_pts.add(n)
+        move_action = action_provider(n)
+        if move_action.is_possible(entity, world):
+            item = (move_action.get_cost(entity, world), i, move_action)
+            heapq.heappush(q, item)
+            i += 1
+
+    while len(q) > 0:
+        cost, _, action = heapq.heappop(q)
+        if action.get_xy() in endpoints:
+            return action  # we did it
+        else:
+            for n in util.Utils.rand_neighbors(action.get_xy()):
+                if n not in seen_pts:
+                    seen_pts.add(n)
+                    move_action = action_provider(n)
+                    move_action.prev_cost = cost
+                    move_action.prev = action
+                    if move_action.is_possible(entity, world):
+                        new_item = (move_action.get_total_cost(entity, world), i, move_action)
+                        heapq.heappush(q, new_item)
+                        i += 1
+
+    return None  # no way to do it
 
 
 def get_towers_in_shop():

@@ -499,6 +499,13 @@ class Utils:
             yield (x - dist, y - dist)
 
     @staticmethod
+    def rand_neighbors(xy):
+        x, y = xy
+        res = [(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)]
+        random.shuffle(res)
+        return res
+
+    @staticmethod
     def ticks_to_time_string(n_ticks, fps=60, show_hours_if_zero=False):
         seconds = max(0, n_ticks // fps)
         hours = seconds // 3600
