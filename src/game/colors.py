@@ -19,16 +19,17 @@ for r in c:
                 ALL_BRIGHT_COLORS.append(rgb)
 
 RED = (1, 0.333, 0.333)
+ORANGE = (1, 0.666, 0)
 YELLOW = (1, 1, 0.333)
 GREEN = (0.333, 1, 0.333)
 BLUE = (0.333, 0.333, 1)
 PURPLE = (1, 0.333, 1)
 
-DARK_RED = (1, 0.666, 0.666)
-DARK_YELLOW = (1, 1, 0.666)
-DARK_GREEN = (0.666, 1, 0.666)
-DARK_BLUE = (0.666, 0.666, 1)
-DARK_PURPLE = (1, 0.666, 1)
+DARK_RED = (0.666, 0, 0)
+DARK_YELLOW = (0.666, 0.666, 0)
+DARK_GREEN = (0, 0.666, 0)
+DARK_BLUE = (0, 0, 0.666)
+DARK_PURPLE = (0.666, 0, 0.666)
 
 
 def rand_color(seed=None):

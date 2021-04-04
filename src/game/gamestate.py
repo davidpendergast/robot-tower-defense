@@ -178,7 +178,7 @@ class InGameScene(Scene):
         self.info_rect = [0, const.H - 6, const.W - self.shop_rect[2], 6]
 
         self._paused = False
-        self._playback_speed = 1  # larger = slower
+        self._playback_speed = 0  # larger = slower
         self.cash = 200
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 2,
@@ -190,10 +190,21 @@ class InGameScene(Scene):
     def set_paused(self, val):
         self._paused = val
 
+    def toggle_paused(self):
+        self.set_paused(not self.is_paused())
+
     def should_skip_this_frame(self):
-        return self.state.scene_ticks % self._playback_speed != 0
+        return self.state.scene_ticks % (1 + self._playback_speed) != 0
+
+    def increment_playback_speed(self):
+        self._playback_speed = (self._playback_speed + 1) % 3
 
     def update(self):
+        if inputs.get_instance().was_pressed(pygame.K_SPACE):
+            self.toggle_paused()
+        if inputs.get_instance().was_pressed(pygame.K_TAB):
+            self.increment_playback_speed()
+
         self._world.update_all(self)
 
     def draw(self, screen):

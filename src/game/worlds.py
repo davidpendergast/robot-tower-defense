@@ -28,6 +28,10 @@ class World:
     def h(self):
         return self._h
 
+    def rand_cell(self):
+        return (int(random.random() * self.w()),
+                int(random.random() * self.h()))
+
     def __contains__(self, entity):
         return entity in self.positions
 
@@ -398,6 +402,18 @@ def generate_world(w, h):
     res.set_pos(units.EnemySpawnZone(), (0, 1))
     res.set_pos(units.EnemySpawnZone(), (1, 0))
     res.set_pos(units.EnemySpawnZone(), (1, 1))
+
+    for i in range(0, 5):
+        res.set_pos(units.RockTower(), res.rand_cell())
+
+    for i in range(0, 3):
+        res.set_pos(units.GoldOreTower(), res.rand_cell())
+
+    for _ in range(0, 2):
+        for tower in units.get_towers_in_shop():
+            res.set_pos(tower, res.rand_cell())
+            for upgrade in tower.get_upgrades():
+                res.set_pos(upgrade, res.rand_cell())
 
     return res
 

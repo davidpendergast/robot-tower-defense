@@ -84,7 +84,7 @@ class BuildBotSpawner(RobotSpawner):
 class MineBotSpawner(RobotSpawner):
 
     def __init__(self):
-        super().__init__("M", colors.YELLOW, "Mine-Bot Factory",
+        super().__init__("M", colors.MID_GRAY, "Mine-Bot Factory",
                          "A tower that creates and charges Mine-Bots.", lambda: MineBot())
 
     def get_base_stats(self):
@@ -118,6 +118,9 @@ class Agent(worlds.Entity):
                 return True
         return False
 
+    def act(self, world, state):
+        self.wander(world, state)
+
 
 class Robot(Agent):
 
@@ -138,9 +141,6 @@ class BuildBot(Robot):
         res[worlds.StatTypes.APS] = 2
 
         return res
-
-    def act(self, world, state):
-        self.wander(world, state)
 
 
 class MineBot(Robot):
@@ -196,7 +196,7 @@ class EnemySpawnZone(worlds.Entity):
 class RockTower(Tower):
 
     def __init__(self):
-        super().__init__("■", colors.MID_GRAY, "Rock", "A large rock.")
+        super().__init__("▒", colors.DARK_GRAY, "Rock", "A large rock.")
 
     def get_upgrades(self):
         return [GoldOreTower()]
@@ -212,11 +212,14 @@ class WallTower(Tower):
         res[worlds.StatTypes.SOLIDITY] = 1
         return res
 
+    def get_upgrades(self):
+        return [DoorTower()]
+
 
 class DoorTower(Tower):
 
     def __init__(self):
-        super().__init__("▒", colors.LIGHT_GRAY, "Door", "A door that only bots can pass through.")
+        super().__init__("◘", colors.LIGHT_GRAY, "Door", "A door that only bots can pass through.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -227,7 +230,7 @@ class DoorTower(Tower):
 class GoldOreTower(Tower):
 
     def __init__(self):
-        super().__init__("▓", colors.YELLOW, "Gold Ore", "A rock with veins of gold. Can be mined by Mine-Bots.")
+        super().__init__("▒", colors.DARK_YELLOW, "Gold Ore", "A rock with veins of gold. Can be mined by Mine-Bots.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -269,21 +272,21 @@ class WeaknessTower(Tower):
 class SlowTower(Tower):
 
     def __init__(self):
-        super().__init__("W", colors.YELLOW, "Slowing Tower",
+        super().__init__("S", colors.DARK_PURPLE, "Slowing Tower",
                          "A tower that slows enemies.")
 
 
 class PoisonTower(Tower):
 
     def __init__(self):
-        super().__init__("P", colors.YELLOW, "Poison Tower",
+        super().__init__("P", colors.PURPLE, "Poison Tower",
                          "A tower that poisons enemies.")
 
 
 class ExplosionTower(Tower):
 
     def __init__(self):
-        super().__init__("P", colors.YELLOW, "Explosion Tower",
+        super().__init__("E", colors.ORANGE, "Explosion Tower",
                          "A tower that deals damage to all enemies within its radius.")
 
 
