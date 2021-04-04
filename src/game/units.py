@@ -152,6 +152,14 @@ class Robot(Agent):
         self.current_path = None
         self.charge = self.get_stat_value(worlds.StatTypes.MAX_CHARGE)
 
+        self.carrying_item = None
+
+    def set_item_carrying(self, e):
+        self.carrying_item = e
+
+    def get_item_carrying(self):
+        return self.carrying_item
+
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.MAX_CHARGE] = 32
@@ -168,7 +176,7 @@ class Robot(Agent):
         return [world.get_pos(s) for s in world.all_spawners() if s.can_charge(self)]
 
     def get_goal_locations(self, world, state):
-        return [(0, 0)]
+        return []
 
     def try_to_do_goal_action(self, world, state):
         xy = world.get_pos(self)
@@ -180,12 +188,6 @@ class Robot(Agent):
                 else:
                     pass  # TODO sound for charging
                 return True
-        # TODO debugging
-        if self.charge > 0 and xy in self.get_goal_locations(world, state):
-            self.charge -= 1
-            return True
-        else:
-            return False
 
     def get_path_to_charging_station(self, from_xy, world, state):
         locs = self.get_charging_station_locations(world, state)
@@ -243,17 +245,89 @@ class BuildBot(Robot):
 
         return res
 
+    def get_goal_locations(self, world, state):
+        return []
+
 
 class MineBot(Robot):
 
     def __init__(self):
         super().__init__("☻", colors.MID_GRAY, "Mine-Bot", "A robot that can mine resources.")
 
+    def get_goal_locations(self, world, state):
+        if self.carrying_item is not None:
+            # deliver rock to hearts
+            return [xy for xy in world.empty_cells_adjacent_to([world.get_pos(h) for h in world.all_hearts()])]
+        else:
+            # mine more rocks
+            stone_locs = [world.get_pos(e) for e in world.all_stone_items()]
+            rock_locs = world.empty_cells_adjacent_to([world.get_pos(e) for e in world.all_active_rocks()], empty_for=self)
+            stone_locs.extend(rock_locs)
+            return stone_locs
+
+    def try_to_do_goal_action(self, world, state):
+        xy = world.get_pos(self)
+        if self.carrying_item is None:
+            for e in world.all_entities_in_cell(xy, cond=lambda e: e.is_stone_item()):
+                self.set_item_carrying(e)
+                world.remove(e)
+                # TODO sound for picking up a stone
+                return True
+        else:
+            for h in world.all_entities_adjacent_to(xy, cond=lambda e: e.is_heart()):
+                state.score_item(self.carrying_item)
+                self.carrying_item = None
+                return True
+
+        for n in util.Utils.rand_neighbors(xy):
+            for ent in world.all_entities_in_cell(n, cond=lambda e: e.is_rock() and e.is_active()):
+                return ent.mine(world, state)
+
+        return super().try_to_do_goal_action(world, state)
+
 
 class ScavengerBot(Robot):
 
     def __init__(self):
         super().__init__("☻", colors.GREEN, "Scavenger-Bot", "A robot that collects and delivers gold.")
+
+    def get_goal_locations(self, world, state):
+        if priority == 0:
+            return []
+        else:
+            return None
+
+
+class GoldIngot(worlds.Entity):
+
+    def __init__(self, value):
+        self.value = value
+        super().__init__("$", colors.DARK_YELLOW, "Gold Bar (${})".format(self.value),
+                         "A valuable piece of gold.\nCan be delivered to an energy crystal for ${}.".format(self.value))
+
+    def is_gold_ingot(self):
+        return True
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.SOLIDITY] = 0
+        res[worlds.StatTypes.SELL_PRICE] = self.value
+        return res
+
+
+class StoneItem(worlds.Entity):
+
+    def __init__(self):
+        super().__init__("•", colors.LIGHT_GRAY, "Piece of Stone",
+                         "A piece of stone, used for building.\nCan be delivered to an energy crystal.")
+
+    def is_stone_item(self):
+        return True
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.SOLIDITY] = 0
+        return res
 
 
 class Enemy(Agent):
@@ -312,10 +386,68 @@ class EnemySpawnZone(worlds.Entity):
 class RockTower(Tower):
 
     def __init__(self):
-        super().__init__("▒", colors.DARK_GRAY, "Rock", "A large rock. Can be mined for stone.")
+        super().__init__("▒", colors.LIGHT_GRAY, "Rock", "A large rock. Can be mined for stone.")
+        self.deactivation_countdown = 0
+        self.deactivation_period = 10
+        self.mine_pcnt = 0.1
+
+    def is_rock(self):
+        return True
+
+    def get_base_color(self):
+        return colors.LIGHT_GRAY if self.is_active() else colors.DARK_GRAY
+
+    def is_active(self):
+        return self.deactivation_countdown <= 0
+
+    def act(self, world, state):
+        if self.deactivation_countdown > 0:
+            self.deactivation_countdown -= 1
+
+    def mine(self, world, state):
+        if not self.is_active():
+            return False
+        else:
+            if random.random() < self.mine_pcnt:
+                xy = world.get_pos(self)
+                ns = [n for n in world.empty_cells_adjacent_to(xy)]
+                if len(ns) > 0:
+                    n = random.choice(ns)
+                    self.drop_resources_at(n, world, state)
+                self.deactivation_countdown = self.deactivation_period
+            else:
+                pass  # TODO sound for failed mine
+            return True
+
+    def drop_resources_at(self, pos, world, state):
+        world.set_pos(StoneItem(), pos)
+        # TODO play sound for mining a rock
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.HP] = 500
+        res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.APS] = 1
+        return res
 
     def get_upgrades(self):
         return [GoldOreTower()]
+
+
+class GoldOreTower(RockTower):
+
+    def __init__(self):
+        super().__init__()
+        self.character = "▒"
+        self.base_color = colors.DARK_YELLOW
+        self.name = "Gold Ore"
+        self.description = "A rock with veins of gold.\nCan be mined for stone and gold."
+
+    def get_base_color(self):
+        return colors.DARK_YELLOW if self.is_active() else colors.VERY_DARK_YELLOW
+
+    def get_upgrades(self):
+        return []
 
 
 class WallTower(Tower):
@@ -340,17 +472,6 @@ class DoorTower(Tower):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 2
-        return res
-
-
-class GoldOreTower(Tower):
-
-    def __init__(self):
-        super().__init__("▒", colors.DARK_YELLOW, "Gold Ore", "A rock with veins of gold.\nCan be mined for stone and gold.")
-
-    def get_base_stats(self):
-        res = super().get_base_stats()
-        res[worlds.StatTypes.SOLIDITY] = 1
         return res
 
 

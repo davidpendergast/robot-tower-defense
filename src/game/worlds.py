@@ -21,7 +21,10 @@ class World:
                         "enemies": (lambda x: x.is_enemy(), {}),
                         "robots": (lambda x: x.is_robot(), {}),
                         "towers": (lambda x: x.is_tower(), {}),
-                        "spawners": (lambda x: x.is_spawner(), {})}
+                        "spawners": (lambda x: x.is_spawner(), {}),
+                        "rocks": (lambda x: x.is_rock(), {}),
+                        "stone_items": (lambda x: x.is_stone_item(), {}),
+                        "gold_ingots": (lambda x: x.is_gold_ingot(), {})}
 
     def w(self):
         return self._w
@@ -121,6 +124,38 @@ class World:
     def all_towers(self):
         for e in self._caches["towers"][1]:
             yield e
+
+    def all_rocks(self):
+        for e in self._caches["rocks"][1]:
+            yield e
+
+    def all_stone_items(self):
+        for e in self._caches["stone_items"][1]:
+            yield e
+
+    def all_gold_ingots(self):
+        for e in self._caches["gold_ingots"][1]:
+            yield e
+
+    def all_active_rocks(self):
+        for e in self._caches["rocks"][1]:
+            if e.is_active():
+                yield e
+
+    def empty_cells_adjacent_to(self, xys, empty_for=None):
+        xys = set(util.Utils.listify(xys))
+        res = set()
+        for xy in xys:
+            for n in util.Utils.rand_neighbors(xy):
+                if self.is_valid(n) and n not in xys and n not in res:
+                    if empty_for is None and self.get_solidity(n) == 0 or self.can_move_to(empty_for, n):
+                        res.add(n)
+        return res
+
+    def all_entities_adjacent_to(self, xy, cond=None):
+        for n in util.Utils.rand_neighbors(xy):
+            for e in self.all_entities_in_cell(n, cond=cond):
+                yield e
 
     def update_all(self, scene):
         to_update = [e for e in self.positions]
@@ -419,6 +454,15 @@ class Entity:
     def is_tower(self):
         return False
 
+    def is_rock(self):
+        return False
+
+    def is_stone_item(self):
+        return False
+
+    def is_gold_ingot(self):
+        return False
+
     def update(self, world, state):
         if self.perturbed_countdown > 0:
             self.perturbed_countdown -= 1
@@ -484,12 +528,15 @@ def generate_world2(w, h):
 
     return res
 
+
 def generate_world(w, h):
     # TODO some sweet world generation code
     res = World(w, h)
 
     import src.game.units as units
-    res.set_pos(units.BuildBotSpawner(), (5, 5))
+    res.set_pos(units.MineBotSpawner(), (5, 5))
+    res.set_pos(units.RockTower(), (10, 10))
+    res.set_pos(units.HeartTower(), (15, 10))
 
     return res
 

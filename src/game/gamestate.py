@@ -267,6 +267,12 @@ class InGameScene(Scene):
     def increment_playback_speed(self):
         self._playback_speed = (self._playback_speed + 1) % 3
 
+    def score_item(self, ent):
+        if ent.is_stone_item():
+            self.stones += 1
+            self.score += 10
+            # TODO play sound for scoring a stone
+
     def update(self):
         if inputs.get_instance().was_pressed(pygame.K_SPACE):
             self.toggle_paused()
