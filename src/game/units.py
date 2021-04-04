@@ -56,7 +56,14 @@ class RobotSpawner(Tower):
 
     def get_base_stats(self):
         res = super().get_base_stats()
+        res[worlds.StatTypes.SOLIDITY] = 2
         return res
+
+    def can_charge(self, entity):
+        return entity.get_name() == self.robot_producer().get_name()
+
+    def is_spawner(self):
+        return True
 
     def act(self, world, state):
         my_xy = world.get_pos(self)
@@ -119,6 +126,11 @@ class Agent(worlds.Entity):
     def __init__(self, character, color, name, description):
         super().__init__(character, color, name, description)
 
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.SOLIDITY] = 0
+        return res
+
     def wander(self, world, state):
         xy = world.get_pos(self)
         ns = [n for n in util.Utils.neighbors(xy[0], xy[1])]
@@ -137,9 +149,88 @@ class Robot(Agent):
 
     def __init__(self, character, color, name, description):
         super().__init__(character, color, name, description)
+        self.current_path = None
+        self.charge = self.get_stat_value(worlds.StatTypes.MAX_CHARGE)
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.MAX_CHARGE] = 32
+        return res
+
+    def get_char(self):
+        if self.character == "☻":
+            return "☺" if self.charge <= 0 else "☻"
 
     def is_robot(self):
         return True
+
+    def get_charging_station_locations(self, world, state):
+        return [world.get_pos(s) for s in world.all_spawners() if s.can_charge(self)]
+
+    def get_goal_locations(self, world, state):
+        return [(0, 0)]
+
+    def try_to_do_goal_action(self, world, state):
+        xy = world.get_pos(self)
+        if self.charge < self.get_max_charge():
+            for ent in world.all_entities_in_cell(xy, cond=lambda e: e.is_spawner() and e.can_charge(self)):
+                self.add_charge(ent.get_stat_value(worlds.StatTypes.CHARGE_RATE))
+                if self.charge >= self.get_max_charge():
+                    pass  # TODO sound for max charge
+                else:
+                    pass  # TODO sound for charging
+                return True
+        # TODO debugging
+        if self.charge > 0 and xy in self.get_goal_locations(world, state):
+            self.charge -= 1
+            return True
+        else:
+            return False
+
+    def get_path_to_charging_station(self, from_xy, world, state):
+        locs = self.get_charging_station_locations(world, state)
+        return find_best_path_to(self, world, locs, start=from_xy, or_adjacent_to=False)
+
+    def get_path_to_goal(self, from_xy, world, state):
+        locs = self.get_goal_locations(world, state)
+        return find_best_path_to(self, world, locs, start=from_xy, or_adjacent_to=False)
+
+    def act(self, world, state):
+        did_something = False
+        if self.current_path is not None and len(self.current_path) > 0:
+            next_step = self.current_path[0]
+            res = next_step.perform(self, world)
+            if res is False:
+                # we got blocked by something, abort path
+                self.current_path = None
+            elif res is True:
+                self.current_path.pop(0)
+            else:
+                pass  # the movement is in progress?
+            did_something = True
+            self.charge -= 1
+        else:
+            self.current_path = None
+            if self.try_to_do_goal_action(world, state):
+                did_something = True
+            else:
+                if self.charge > 0:
+                    path_to_goal = self.get_path_to_goal(world.get_pos(self), world, state)
+                    if path_to_goal is not None and len(path_to_goal) < self.charge - 1:
+                        # we're going to attempt a goal
+                        self.current_path = path_to_goal
+
+                if self.current_path is None:
+                    path_to_charging_station = self.get_path_to_charging_station(world.get_pos(self), world, state)
+                    self.current_path = path_to_charging_station
+
+        if self.current_path is None and not did_something:
+            # can't find a path to the goal or a charging station, just wander.
+            self.wander(world, state)
+            self.charge -= 1
+
+        if self.charge < 0:
+            self.charge = 0
 
 
 class BuildBot(Robot):
@@ -149,7 +240,6 @@ class BuildBot(Robot):
 
     def get_base_stats(self):
         res = super().get_base_stats()
-        res[worlds.StatTypes.APS] = 2
 
         return res
 
@@ -187,9 +277,10 @@ class Enemy(Agent):
         res = {}
         for s in self._base_stats:
             res[s] = self._base_stats[s]
-        for s in worlds.ALL_STAT_TYPES:
+        super_stats = super().get_base_stats()
+        for s in super_stats:
             if s not in res:
-                res[s] = s.default_val
+                res[s] = super_stats[s]
         return res
 
     def is_enemy(self):
@@ -397,6 +488,9 @@ class MoveToAction(Action):
     def __init__(self, xy):
         super().__init__(xy)
 
+    def __repr__(self):
+        return "{}{}".format(type(self).__name__, self.get_xy())
+
     def get_name(self):
         return "MoveToAction(xy={})".format(self.xy)
 
@@ -473,8 +567,8 @@ class AttackAndMoveAction(MoveToAction):
             return False
 
 
-def find_best_path_to(entity, world, endpoints, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
-    final_action = _find_best_path_helper(entity, world, endpoints, or_adjacent_to=or_adjacent_to,
+def find_best_path_to(entity, world, endpoints, start=None, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
+    final_action = _find_best_path_helper(entity, world, endpoints, start=start, or_adjacent_to=or_adjacent_to,
                                           action_provider=action_provider)
 
     if final_action is None:
@@ -489,15 +583,16 @@ def find_best_path_to(entity, world, endpoints, or_adjacent_to=False, action_pro
         return res
 
 
-def _find_best_path_helper(entity, world, endpoints, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
+def _find_best_path_helper(entity, world, endpoints, start=None, or_adjacent_to=False, action_provider=lambda xy: MoveToAction(xy)):
     if len(endpoints) == 0:
-        raise ValueError("endpoints is empty")
-    endpoints = set(endpoints)
+        return None
+    endpoint_set = set(endpoints)
     if or_adjacent_to:
         for pt in endpoints:
             for n in util.Utils.neighbors(pt[0], pt[1]):
-                endpoints.add(n)
-    start_xy = world.get_pos(entity)
+                endpoint_set.add(n)
+    endpoints = endpoint_set
+    start_xy = start if start is not None else world.get_pos(entity)
     seen_pts = set()
     seen_pts.add(start_xy)
 

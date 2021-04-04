@@ -20,7 +20,8 @@ class World:
         self._caches = {"hearts": (lambda x: x.is_heart(), {}),  # dicts are just for uniqueness and ordering
                         "enemies": (lambda x: x.is_enemy(), {}),
                         "robots": (lambda x: x.is_robot(), {}),
-                        "towers": (lambda x: x.is_tower(), {})}
+                        "towers": (lambda x: x.is_tower(), {}),
+                        "spawners": (lambda x: x.is_spawner(), {})}
 
     def w(self):
         return self._w
@@ -103,6 +104,10 @@ class World:
 
     def all_hearts(self):
         for e in self._caches["hearts"][1]:
+            yield e
+
+    def all_spawners(self):
+        for e in self._caches["spawners"][1]:
             yield e
 
     def all_enemies(self):
@@ -381,8 +386,11 @@ class Entity:
     def get_max_hp(self):
         return self.get_stat_value(StatTypes.HP)
 
+    def get_max_charge(self):
+        return self.get_stat_value(StatTypes.MAX_CHARGE)
+
     def add_charge(self, val):
-        self.charge = min(self.get_stat_value(StatTypes.MAX_CHARGE), self.charge + val)
+        self.charge = min(self.get_max_charge(), self.charge + val)
 
     def set_hp(self, new_hp):
         self.hp = util.Utils.bound(new_hp, 0, self.get_max_hp())
@@ -397,6 +405,9 @@ class Entity:
         return False
 
     def is_heart(self):
+        return False
+
+    def is_spawner(self):
         return False
 
     def is_enemy(self):
@@ -446,7 +457,7 @@ class Entity:
             return False
 
 
-def generate_world(w, h):
+def generate_world2(w, h):
     # TODO some sweet world generation code
     res = World(w, h)
 
@@ -470,6 +481,15 @@ def generate_world(w, h):
             res.set_pos(tower, res.rand_cell())
             for upgrade in tower.get_upgrades():
                 res.set_pos(upgrade, res.rand_cell())
+
+    return res
+
+def generate_world(w, h):
+    # TODO some sweet world generation code
+    res = World(w, h)
+
+    import src.game.units as units
+    res.set_pos(units.BuildBotSpawner(), (5, 5))
 
     return res
 
