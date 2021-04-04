@@ -721,7 +721,7 @@ class TextBuilder:
         self.text += new_text
         return self
 
-    def addLine(self, new_text, color=None):
+    def addLine(self, new_text, color=None):  # XXX why tf is this camel cased and how did i never notice
         return self.add(new_text + "\n", color=color)
 
     def get_dimensions(self):

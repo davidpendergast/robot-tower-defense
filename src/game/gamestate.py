@@ -226,7 +226,13 @@ class InGameScene(Scene):
 
         self._paused = False
         self._playback_speed = 0  # larger = slower
+
+        self.wave = 0
+        self.wave_prog = 0
+
         self.cash = 200
+        self.stones = 15
+        self.score = 0
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 2,
                                            const.H - self.info_rect[3] - 2)
@@ -348,8 +354,30 @@ class InGameScene(Scene):
     def _draw_shop(self, screen):
         pass
 
+    def get_wave(self):
+        return self.wave
+
+    def get_wave_prog(self):
+        return self.wave_prog
+
     def _draw_info_text(self, screen):
-        pass
+        x = self.info_rect[0] + 1
+        y = self.info_rect[1] + 1
+        w = self.info_rect[2] - 2
+        ent_to_show = self.selected_entity
+        if ent_to_show is None:
+            ent_to_show = self.hovered_entity
+
+        if ent_to_show is None:
+            wave_text = "Wave {}".format(self.get_wave() + 1)
+            score_text = "Score: {}".format(self.score)
+            if len(score_text) < 15:
+                score_text = score_text + " " * (15 - len(score_text))
+            screen.add_text((x, y), wave_text, color=colors.LIGHT_GRAY, replace=True)
+            screen.add_text((x + w + 1 - len(score_text), y), score_text, color=colors.LIGHT_GRAY, replace=True)
+        else:
+            text = ent_to_show[0].get_info_text(w, in_world=ent_to_show[1] == "world")
+            screen.add_text((x, y), text, replace=True)
 
     def _draw_buttons(self, screen):
         pass

@@ -23,7 +23,9 @@ class Tower(worlds.Entity):
 class HeartTower(Tower):
 
     def __init__(self):
-        super().__init__("♥", colors.RED, "Energy Crystal", "Protect this tower at all costs!")
+        super().__init__("♥", colors.RED, "Energy Crystal",
+                         "Protect this tower at all costs!\n" +
+                         "Gold must be delivered here.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -74,7 +76,7 @@ class BuildBotSpawner(RobotSpawner):
 
     def __init__(self):
         super().__init__("B", colors.YELLOW, "Build-Bot Factory",
-                         "A tower that creates and charges Build-Bots.", lambda: BuildBot())
+                         "A tower that creates Build-Bots.", lambda: BuildBot())
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -85,7 +87,7 @@ class MineBotSpawner(RobotSpawner):
 
     def __init__(self):
         super().__init__("M", colors.MID_GRAY, "Mine-Bot Factory",
-                         "A tower that creates and charges Mine-Bots.", lambda: MineBot())
+                         "A tower that creates Mine-Bots.", lambda: MineBot())
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -96,7 +98,7 @@ class ScavengerBotSpawner(RobotSpawner):
 
     def __init__(self):
         super().__init__("S", colors.GREEN, "Scavenger-Bot Factory",
-                         "A tower that creates and charges Scavenger-Bots.", lambda: ScavengerBot())
+                         "A tower that creates Scavenger-Bots.", lambda: ScavengerBot())
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -134,7 +136,7 @@ class Robot(Agent):
 class BuildBot(Robot):
 
     def __init__(self):
-        super().__init__("☻", colors.YELLOW, "Build-Bot", "A robot that builds and destroys towers.")
+        super().__init__("☻", colors.YELLOW, "Build-Bot", "A robot that builds (and sells) towers.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -152,7 +154,7 @@ class MineBot(Robot):
 class ScavengerBot(Robot):
 
     def __init__(self):
-        super().__init__("☻", colors.GREEN, "Scavenger-Bot", "A robot that collects gold from the battlefield.")
+        super().__init__("☻", colors.GREEN, "Scavenger-Bot", "A robot that collects and delivers gold.")
 
 
 class Enemy(Agent):
@@ -175,7 +177,7 @@ class EnemySpawnZone(worlds.Entity):
 
     def __init__(self):
         super().__init__("x", colors.DARK_RED, "Enemy Spawn Zone",
-                         "Cannot build here. Enemies are invincible while standing here.")
+                         "Cannot build here.\nEnemies are invincible while standing here.")
 
     def is_decoration(self):
         return True
@@ -196,7 +198,7 @@ class EnemySpawnZone(worlds.Entity):
 class RockTower(Tower):
 
     def __init__(self):
-        super().__init__("▒", colors.DARK_GRAY, "Rock", "A large rock.")
+        super().__init__("▒", colors.DARK_GRAY, "Rock", "A large rock. Can be mined for stone.")
 
     def get_upgrades(self):
         return [GoldOreTower()]
@@ -230,7 +232,7 @@ class DoorTower(Tower):
 class GoldOreTower(Tower):
 
     def __init__(self):
-        super().__init__("▒", colors.DARK_YELLOW, "Gold Ore", "A rock with veins of gold. Can be mined by Mine-Bots.")
+        super().__init__("▒", colors.DARK_YELLOW, "Gold Ore", "A rock with veins of gold.\nCan be mined for stone and gold.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -266,7 +268,7 @@ class WeaknessTower(Tower):
 
     def __init__(self):
         super().__init__("W", colors.BLUE, "Weakness Tower",
-                         "A tower that weakens enemies and makes them take more damage.")
+                         "A tower that weakens enemies and makes them\ntake more damage.")
 
 
 class SlowTower(Tower):
@@ -287,7 +289,7 @@ class ExplosionTower(Tower):
 
     def __init__(self):
         super().__init__("E", colors.ORANGE, "Explosion Tower",
-                         "A tower that deals damage to all enemies within its radius.")
+                         "A tower that deals damage to all enemies\nwithin its radius.")
 
 
 class EnemyFactory:
@@ -304,12 +306,16 @@ class EnemyFactory:
 
         if difficulty == 0:
             name = random.choice(EnemyFactory.EASY_ENEMIES)
+            adj = "A weak entity"
         elif difficulty == 1:
             name = random.choice(EnemyFactory.MEDIUM_ENEMIES)
+            adj = "An entity"
         elif difficulty == 2:
             name = random.choice(EnemyFactory.HARD_ENEMIES)
+            adj = "An otherworldly entity"
         else:
             name = random.choice(EnemyFactory.LEGENDARY_ENEMIES)
+            adj = "A legendary entity"
 
         if name not in EnemyFactory.ENEMY_LOOKUP:
             stats = {
@@ -325,7 +331,7 @@ class EnemyFactory:
 
         res = []
         for _ in range(0, n):
-            res.append(Enemy(name, colors.RED, stats, "Enemy", "An otherworldly entity known only as \"{}\".".format(name)))
+            res.append(Enemy(name, colors.RED, stats, "Enemy", "{} known only as \"{}\".".format(adj, name)))
 
         return res
 

@@ -269,6 +269,12 @@ class Entity:
 
         self._id = _next_id()
 
+    def get_info_text(self, w, in_world=True):
+        tb = sprites.TextBuilder()
+        tb.addLine("{} ({}):".format(self.get_name(), self.get_char()), color=self.base_color)
+        tb.addLine(self.get_description(), color=self.base_color)
+        return tb
+
     def get_base_stats(self):
         res = {}
         for stat_type in ALL_STAT_TYPES:
