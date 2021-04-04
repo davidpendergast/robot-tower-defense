@@ -93,6 +93,14 @@ class World:
             if entity in self._caches[cache_key][1]:
                 del self._caches[cache_key][1][entity]
 
+    def request_build_at(self, entity, xy):
+        if self.get_solidity(xy) == 0:
+            import src.game.units as units
+            print("INFO: requested to build {} at {}".format(entity, xy))
+            self.set_pos(units.BuildMarker(entity), xy)
+            return True
+        return False
+
     def all_hearts(self):
         for e in self._caches["hearts"][1]:
             yield e
@@ -278,6 +286,9 @@ class Entity:
             return 999
         else:
             return configs.target_fps / actions_per_sec
+
+    def is_selectable(self):
+        return self.is_tower()
 
     def get_char(self):
         return self.character
