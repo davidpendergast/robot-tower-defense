@@ -24,7 +24,8 @@ class World:
                         "spawners": (lambda x: x.is_spawner(), {}),
                         "rocks": (lambda x: x.is_rock(), {}),
                         "stone_items": (lambda x: x.is_stone_item(), {}),
-                        "gold_ingots": (lambda x: x.is_gold_ingot(), {})}
+                        "gold_ingots": (lambda x: x.is_gold_ingot(), {}),
+                        "build_markers": (lambda x: x.is_build_marker(), {})}
 
     def w(self):
         return self._w
@@ -101,7 +102,7 @@ class World:
         if self.get_solidity(xy) == 0:
             import src.game.units as units
             print("INFO: requested to build {} at {}".format(entity, xy))
-            self.set_pos(units.BuildMarker(entity), xy)
+            self.set_pos(units.BuildNewMarker(entity), xy)
             return True
         return False
 
@@ -141,6 +142,10 @@ class World:
         for e in self._caches["rocks"][1]:
             if e.is_active():
                 yield e
+
+    def all_build_markers(self):
+        for e in self._caches["build_markers"][1]:
+            yield e
 
     def empty_cells_adjacent_to(self, xys, empty_for=None):
         xys = set(util.Utils.listify(xys))
@@ -267,6 +272,7 @@ class StatTypes:
     BUY_PRICE = StatType("Gold Cost", lambda v: "Cost: ${}".format(v), colors.YELLOW, -1)
     SELL_PRICE = StatType("Sell Price", lambda v: "Sell for: ${}".format(v), colors.GREEN, -1)
     STONE_PRICE = StatType("Stone Cost", lambda v: "Stone Cost: {}".format(v), colors.LIGHT_GRAY, 0)
+    BUILD_TIME = StatType("Build Time", lambda v: "Build Time: {}".format(v), colors.LIGHT_GRAY, 10)
     VAMPRISM = StatType("Vampirism", lambda v: "Vampirism: {}%".format(v), colors.PURPLE, 0)
     SOLIDITY = StatType("Solidity", lambda v: "", colors.WHITE, 1)  # 0 = air, 1 = wall, 2 = door
 
@@ -404,6 +410,21 @@ class Entity:
         aggro = self.get_stat_value(StatTypes.AGGRESSION)
         return util.Utils.bound(1 - (aggro / 10), 0, 2)
 
+    def get_gold_cost(self):
+        return self.get_stat_value(StatTypes.BUY_PRICE)
+
+    def get_stone_cost(self):
+        return self.get_stat_value(StatTypes.STONE_PRICE)
+
+    def get_sell_price(self):
+        return self.get_stat_value(StatTypes.SELL_PRICE)
+
+    def get_build_time(self):
+        return self.get_stat_value(StatTypes.BUILD_TIME)
+
+    def can_sell(self):
+        return self.get_sell_price() >= 0
+
     def on_death(self, world, scene):
         pass
 
@@ -412,9 +433,6 @@ class Entity:
 
     def get_description(self):
         return self.description
-
-    def get_sell_cost(self):
-        return -1
 
     def get_hp(self):
         return max(self.hp, 0)
@@ -462,6 +480,9 @@ class Entity:
         return False
 
     def is_gold_ingot(self):
+        return False
+
+    def is_build_marker(self):
         return False
 
     def update(self, world, state):
@@ -540,6 +561,8 @@ def generate_world(w, h):
     res.set_pos(units.MineBotSpawner(), (5, 5))
     res.set_pos(units.RockTower(), (10, 10))
     res.set_pos(units.HeartTower(), (15, 10))
+
+    res.set_pos(units.BuildBotSpawner(), (20, 10))
 
     return res
 

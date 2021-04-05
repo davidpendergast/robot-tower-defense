@@ -264,7 +264,16 @@ class BuildBot(Robot):
         return res
 
     def get_goal_locations(self, world, state):
-        return []
+        markers = [world.get_pos(b) for b in world.all_build_markers()]
+        return [x for x in world.empty_cells_adjacent_to(markers)]
+
+    def try_to_do_goal_action(self, world, state):
+        xy = world.get_pos(self)
+        for n in util.Utils.rand_neighbors(xy):
+            for bm in world.all_entities_in_cell(n, cond=lambda e: e.is_build_marker()):
+                if bm.activate(world, state):
+                    return True
+        return super().try_to_do_goal_action(world, state)
 
 
 class MineBot(Robot):
@@ -496,11 +505,35 @@ class DoorTower(Tower):
 class BuildMarker(worlds.Entity):
 
     def __init__(self, target):
-        super().__init__(target.get_char(), colors.WHITE, target.get_name(), target.get_description())
+        super().__init__(self.get_marker_symbol(), colors.WHITE, target.get_name(), target.get_description())
         self.target = target
 
-    def is_decoration(self):
+        self.activation_count = 0
+
+    def activate(self, world, state):
+        """Build-bots call this to build stuff"""
+        if self.activation_count >= self.n_activations_required():
+            self.perform_action(world, state)
+        else:
+            self.activation_count += 1
+            # TODO sound for building
         return True
+
+    def n_activations_required(self):
+        return self.target.get_build_time()
+
+    def perform_action(self, world, state):
+        raise NotImplementedError()
+
+    def refund(self, world, state):
+        pass
+
+    def get_marker_symbol(self):
+        raise NotImplementedError()
+
+    def get_description(self):
+        res = self.target.get_description()
+        return res + "\n(Waiting for Build-Bot)"
 
     def is_build_marker(self):
         return True
@@ -511,13 +544,80 @@ class BuildMarker(worlds.Entity):
         return res
 
 
+class BuildNewMarker(BuildMarker):
+    def __init__(self, target):
+        super().__init__(target)
+        self.scene_ticks = 0
+
+    def perform_action(self, world, state):
+        xy = world.get_pos(self)
+        world.remove(self)
+        world.set_pos(self.target, xy)
+
+    def refund(self, world, state):
+        gold_refund = self.target.get_gold_cost()
+        stone_refund = self.target.get_stone_cost()
+        state.cash += gold_refund
+        state.stone += stone_refund
+        # TODO play sound for undoing a build command
+
+    def update(self, world, state):
+        super().update(world, state)
+        self.scene_ticks = state.state.scene_ticks
+
+    def get_marker_symbol(self):
+        return "!"
+
+    def get_char(self):
+        if (self.scene_ticks // (configs.target_fps // 3) % 2) == 0:
+            return self.target.get_char()
+        else:
+            return self.get_marker_symbol()
+
+
+class SellMarker(BuildMarker):
+
+    def __init__(self, target):
+        super().__init__(target)
+
+    def get_marker_symbol(self):
+        return "$"
+
+    def perform_action(self, world, state):
+        gold_reward = self.target.get_sell_price()
+        state.cash += gold_reward
+        world.remove(self.target)
+        world.remove(self)
+        # TODO sound for selling
+
+
+class UpgradeMarker(BuildMarker):
+
+    def __init__(self, old_tower, new_tower):
+        super().__init__(old_tower)
+        self.new_tower = new_tower
+
+    def get_marker_symbol(self):
+        return "↑"
+
+    def perform_action(self, world, state):
+        xy = world.get_pos(self)
+        world.remove(self.target)
+        world.remove(self)
+        world.set_pos(self.new_tower, xy)
+        # TODO sound for upgrading
+
+
 class GunTower(Tower):
 
     def __init__(self):
-        super().__init__("G", colors.WHITE, "Gun Tower", "A basic tower that shoots enemies.")
+        super().__init__("G", colors.BROWN, "Gun Tower", "A basic tower that shoots enemies.")
 
     def get_shop_icon(self):
         return "Gun Twr"
+
+    def perform_action(self, world, state):
+        pass
 
 
 class WeaknessTower(Tower):

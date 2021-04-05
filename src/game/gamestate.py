@@ -214,7 +214,6 @@ class Button:
         return self.scene.hovered_button is self
 
     def on_click(self):
-        print("INFO: clicked button: {}".format(self))
         pass
 
     def get_associated_entity(self):
@@ -240,6 +239,21 @@ class ShopButton(Button):
     def can_afford(self):
         return self.scene.cash >= self.get_gold_cost() and self.scene.stones >= self.get_stone_cost()
 
+    def is_selected(self):
+        current_sel = self.scene.selected_entity
+        my_sel = self.get_associated_entity()
+        if current_sel is not None:
+            return (current_sel[0].get_name() == my_sel[0].get_name()
+                    and current_sel[1] == my_sel[1])
+        else:
+            return False
+
+    def on_click(self):
+        if self.is_active() and self.can_afford() and not self.is_selected():
+            self.scene.set_selected(self.get_associated_entity())
+        else:
+            self.scene.set_selected(None)
+
     def draw(self, screen):
         icon = self._tower_example.get_shop_icon()
         color = self._tower_example.get_color()
@@ -250,6 +264,8 @@ class ShopButton(Button):
         y = self.rect[1]
 
         icon_tb = sprites.TextBuilder()
+        if self.is_selected():
+            icon_tb.add(">", color=colors.BRIGHT_RED)
         icon_tb.add(icon, color=color if self.can_afford() else colors.DARK_GRAY)
         screen.add_text((x, y), icon_tb)
 
@@ -357,7 +373,7 @@ class InGameScene(Scene):
         else:
             return None
 
-    def _set_selected(self, entity_and_location):
+    def set_selected(self, entity_and_location):
         if self.selected_entity != entity_and_location:
             self.selected_entity = entity_and_location
             if entity_and_location is None:
@@ -373,27 +389,28 @@ class InGameScene(Scene):
         else:
             if self.selected_entity is None:
                 if self.hovered_entity is not None and self.hovered_entity[0].is_selectable():
-                    self._set_selected(self.hovered_entity)
+                    self.set_selected(self.hovered_entity)
                 else:
                     pass  # clicked nothing with nothing selected
             else:
                 world_xy = self.get_pos_in_world(xy)
                 if world_xy is None:
                     # clicked nothing, deselect selected entity
-                    self._set_selected(None)
+                    self.set_selected(None)
                 else:
                     if self.selected_entity[1] == "world":
                         if self.hovered_entity is not None and self.hovered_entity[0].is_selectable():
                             # clicked something else, select that instead
-                            self._set_selected(self.hovered_entity)
+                            self.set_selected(self.hovered_entity)
                         else:
                             # clicked nothing, deselect selected entity
-                            self._set_selected(None)
+                            self.set_selected(None)
                     elif self.selected_entity[1] == "shop":
                         # we're currently trying to buy something, and we clicked in world
                         if self._world.request_build_at(self.selected_entity[0], world_xy):
-                            self._set_selected(None)
-                            self.cash -= self.selected_entity.get_stat_value(worlds.StatTypes.BUY_PRICE)
+                            self.cash -= self.selected_entity[0].get_gold_cost()
+                            self.stones -= self.selected_entity[0].get_stone_cost()
+                            self.set_selected(None)
                         else:
                             pass  # TODO play sound for failing to place
 
