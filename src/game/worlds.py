@@ -264,8 +264,9 @@ class StatTypes:
     RANGE = StatType("Range", lambda v: "Range: {}".format(v), colors.BLUE, 1.5)
     ARMOR = StatType("Armor", lambda v: "Armor: {}".format(v), colors.MID_GRAY, 0)
 
-    BUY_PRICE = StatType("Cost", lambda v: "Cost: ${}".format(v), colors.WHITE, -1)
+    BUY_PRICE = StatType("Gold Cost", lambda v: "Cost: ${}".format(v), colors.YELLOW, -1)
     SELL_PRICE = StatType("Sell Price", lambda v: "Sell for: ${}".format(v), colors.GREEN, -1)
+    STONE_PRICE = StatType("Stone Cost", lambda v: "Stone Cost: {}".format(v), colors.LIGHT_GRAY, 0)
     VAMPRISM = StatType("Vampirism", lambda v: "Vampirism: {}%".format(v), colors.PURPLE, 0)
     SOLIDITY = StatType("Solidity", lambda v: "", colors.WHITE, 1)  # 0 = air, 1 = wall, 2 = door
 
@@ -521,10 +522,12 @@ def generate_world2(w, h):
         res.set_pos(units.GoldOreTower(), res.rand_cell())
 
     for _ in range(0, 2):
-        for tower in units.get_towers_in_shop():
-            res.set_pos(tower, res.rand_cell())
-            for upgrade in tower.get_upgrades():
-                res.set_pos(upgrade, res.rand_cell())
+        for tower_provider in units.get_towers_in_shop():
+            if tower_provider is not None:
+                tower = tower_provider()
+                res.set_pos(tower, res.rand_cell())
+                for upgrade in tower.get_upgrades():
+                    res.set_pos(upgrade, res.rand_cell())
 
     return res
 

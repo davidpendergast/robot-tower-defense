@@ -165,11 +165,12 @@ class InstructionsScene(Scene):
         super().__init__(state)
         import src.game.units as units
         crystal = units.HeartTower()
+        buildbot = units.BuildBot()
         self.instructions = sprites.TextBuilder(color=colors.LIGHT_GRAY)
         self.instructions.addLine("Instructions:")
         self.instructions.addLine("1. Use the mouse to buy units.")
         self.instructions.add("2. You cannot build things directly;\n   only Build-Bots (")
-        self.instructions.add("☻", color=colors.YELLOW)
+        self.instructions.add(buildbot.get_char(), color=buildbot.get_base_color())
         self.instructions.addLine(") can build!")
         self.instructions.add("3. Use robots, towers, and walls to protect your ")
         self.instructions.add(crystal.get_char(), color=crystal.get_base_color())
@@ -206,17 +207,63 @@ class Button:
     def contains(self, xy):
         return utils.Utils.rect_contains(self.rect, xy)
 
-    def draw(self, scene, screen):
+    def draw(self, screen):
         pass
 
     def is_hovered(self):
         return self.scene.hovered_button is self
 
-    def on_click(self, scene):
+    def on_click(self):
+        print("INFO: clicked button: {}".format(self))
         pass
 
     def get_associated_entity(self):
         return None
+
+
+class ShopButton(Button):
+
+    def __init__(self, tower_provider, scene, rect):
+        super().__init__(scene, rect)
+        self._tower_provider = tower_provider
+        self._tower_example = tower_provider()
+
+    def is_active(self):
+        return True
+
+    def get_gold_cost(self):
+        return self._tower_example.get_stat_value(worlds.StatTypes.BUY_PRICE)
+
+    def get_stone_cost(self):
+        return self._tower_example.get_stat_value(worlds.StatTypes.STONE_PRICE)
+
+    def can_afford(self):
+        return self.scene.cash >= self.get_gold_cost() and self.scene.stones >= self.get_stone_cost()
+
+    def draw(self, screen):
+        icon = self._tower_example.get_shop_icon()
+        color = self._tower_example.get_color()
+        gold_cost = self._tower_example.get_stat_value(worlds.StatTypes.BUY_PRICE)
+        stone_cost = self._tower_example.get_stat_value(worlds.StatTypes.STONE_PRICE)
+        x = self.rect[0]
+        w = self.rect[2]
+        y = self.rect[1]
+
+        icon_tb = sprites.TextBuilder()
+        icon_tb.add(icon, color=color if self.can_afford() else colors.DARK_GRAY)
+        screen.add_text((x, y), icon_tb)
+
+        price_tb = sprites.TextBuilder()
+        if gold_cost > 0:
+            price_tb.add("${}".format(gold_cost), color=colors.YELLOW if self.can_afford() else colors.DARK_GRAY)
+        if gold_cost > 0 and stone_cost > 0:
+            price_tb.add("/", color=color if self.can_afford() else colors.DARK_GRAY)
+        if stone_cost > 0:
+            price_tb.add("{}".format(stone_cost), color=colors.LIGHT_GRAY if self.can_afford() else colors.DARK_GRAY)
+        screen.add_text((x + w - len(price_tb.text), y), price_tb)
+
+    def get_associated_entity(self):
+        return (self._tower_provider(), "shop")
 
 
 class InGameScene(Scene):
@@ -247,7 +294,16 @@ class InGameScene(Scene):
         self.buttons = self._build_buttons()
 
     def _build_buttons(self):
-        return []
+        res = []
+        import src.game.units as units
+        x = self.shop_rect[0] + 1
+        y = self.shop_rect[1] + 4
+        w = self.shop_rect[2] - 2
+        for t_provider in units.get_towers_in_shop():
+            if t_provider is not None:
+                res.append(ShopButton(t_provider, self, [x, y, w, 1]))
+            y += 1
+        return res
 
     def get_active_buttons(self):
         return [b for b in self.buttons if b.is_active()]
@@ -360,7 +416,21 @@ class InGameScene(Scene):
                     return b.get_associated_entity()
 
     def _draw_shop(self, screen):
-        pass
+        if self.cash < 10000:
+            cash_text = "Gold: ${}".format(self.cash)
+        else:
+            cash_text = "Gold: $9999+"
+        if self.stones < 1000:
+            stones_text = "Stone: {}".format(self.stones)
+        else:
+            stones_text = "Stone: 999+"
+
+        x = self.shop_rect[0] + 1
+        y = self.shop_rect[1] + 1
+        w = self.shop_rect[2]
+        screen.add_text((x, y), cash_text, color=colors.YELLOW)
+        screen.add_text((x, y + 1), stones_text, color=colors.LIGHT_GRAY)
+        screen.add_text((x-1, y + 2), "╟" + "─" * (w - 2) + "╢", color=self.get_border_color(), replace=True)
 
     def get_wave(self):
         return self.wave
@@ -377,18 +447,17 @@ class InGameScene(Scene):
             ent_to_show = self.hovered_entity
 
         if ent_to_show is None:
-            wave_text = "Wave {}".format(self.get_wave() + 1)
             score_text = "Score: {}".format(self.score)
-            if len(score_text) < 15:
-                score_text = score_text + " " * (15 - len(score_text))
-            screen.add_text((x, y), wave_text, color=colors.LIGHT_GRAY, replace=True)
-            screen.add_text((x + w + 1 - len(score_text), y), score_text, color=colors.LIGHT_GRAY, replace=True)
+            screen.add_text((x, y), score_text, color=colors.LIGHT_GRAY, replace=True)
+            wave_text = "Wave {}".format(self.get_wave() + 1)
+            screen.add_text((x, y + 1), wave_text, color=colors.LIGHT_GRAY, replace=True)
         else:
             text = ent_to_show[0].get_info_text(w, in_world=ent_to_show[1] == "world")
             screen.add_text((x, y), text, replace=True)
 
     def _draw_buttons(self, screen):
-        pass
+        for b in self.buttons:
+            b.draw(screen)
 
     def _draw_overlays(self, screen):
         pass
@@ -405,8 +474,11 @@ class InGameScene(Scene):
     def get_view_mode(self):
         return worlds.ViewModes.NORMAL
 
+    def get_border_color(self):
+        return colors.DARK_GRAY
+
     def _draw_borders(self, screen: ascii_screen.AsciiScreen):
-        color = colors.DARK_GRAY
+        color = self.get_border_color()
         screen.add((0, 0), textutils.DOUBLE[0], color=color, replace=True)
         screen.add((const.W - 1, 0), textutils.DOUBLE[2], color=color, replace=True)
         screen.add((0, const.H - 1), textutils.DOUBLE[6], color=color, replace=True)

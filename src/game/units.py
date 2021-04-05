@@ -14,7 +14,13 @@ class Tower(worlds.Entity):
 
     def get_base_stats(self):
         res = super().get_base_stats()
+        res[worlds.StatTypes.BUY_PRICE] = 25
+        res[worlds.StatTypes.SELL_PRICE] = 15
+        res[worlds.StatTypes.STONE_PRICE] = 5
         return res
+
+    def get_shop_icon(self):
+        return self.character
 
     def is_tower(self):
         return True
@@ -28,7 +34,7 @@ class HeartTower(Tower):
     def __init__(self):
         super().__init__("♦", colors.CYAN, "Energy Crystal",
                          "Protect this tower at all costs!\n" +
-                         "Gold must be delivered here.")
+                         "Gold and stones are delivered here.")
 
     def get_base_color(self):
         pcnt_hp = util.Utils.bound(self.get_hp() / self.get_max_hp(), 0, 1)
@@ -58,6 +64,9 @@ class RobotSpawner(Tower):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 2
         return res
+
+    def get_shop_icon(self):
+        return super().get_shop_icon() + "/☻"
 
     def can_charge(self, entity):
         return entity.get_name() == self.robot_producer().get_name()
@@ -91,8 +100,11 @@ class RobotSpawner(Tower):
 class BuildBotSpawner(RobotSpawner):
 
     def __init__(self):
-        super().__init__("B", colors.YELLOW, "Build-Bot Factory",
+        super().__init__("B", colors.GREEN, "Build-Bot Factory",
                          "A tower that creates Build-Bots.", lambda: BuildBot())
+
+    def get_shop_icon(self):
+        return "Blder/☻"
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -105,6 +117,9 @@ class MineBotSpawner(RobotSpawner):
         super().__init__("M", colors.MID_GRAY, "Mine-Bot Factory",
                          "A tower that creates Mine-Bots.", lambda: MineBot())
 
+    def get_shop_icon(self):
+        return "Miner/☻"
+
     def get_base_stats(self):
         res = super().get_base_stats()
         return res
@@ -113,8 +128,11 @@ class MineBotSpawner(RobotSpawner):
 class ScavengerBotSpawner(RobotSpawner):
 
     def __init__(self):
-        super().__init__("S", colors.GREEN, "Scavenger-Bot Factory",
+        super().__init__("S", colors.YELLOW, "Scavenger-Bot Factory",
                          "A tower that creates Scavenger-Bots.", lambda: ScavengerBot())
+
+    def get_shop_icon(self):
+        return "Scvgr/☻"
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -238,7 +256,7 @@ class Robot(Agent):
 class BuildBot(Robot):
 
     def __init__(self):
-        super().__init__("☻", colors.YELLOW, "Build-Bot", "A robot that builds (and sells) towers.")
+        super().__init__("☻", colors.GREEN, "Build-Bot", "A robot that builds (and sells) towers.")
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -289,13 +307,10 @@ class MineBot(Robot):
 class ScavengerBot(Robot):
 
     def __init__(self):
-        super().__init__("☻", colors.GREEN, "Scavenger-Bot", "A robot that collects and delivers gold.")
+        super().__init__("☻", colors.YELLOW, "Scavenger-Bot", "A robot that collects and delivers gold.")
 
     def get_goal_locations(self, world, state):
-        if priority == 0:
-            return []
-        else:
-            return None
+        return []
 
 
 class GoldIngot(worlds.Entity):
@@ -453,7 +468,10 @@ class GoldOreTower(RockTower):
 class WallTower(Tower):
 
     def __init__(self):
-        super().__init__("█", colors.LIGHT_GRAY, "Wall", "An impassible wall.")
+        super().__init__("█", colors.LIGHT_GRAY, "Wall", "An impassible wall.\nCan be upgraded to a door.")
+
+    def get_shop_icon(self):
+        return "Wall"
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -498,6 +516,9 @@ class GunTower(Tower):
     def __init__(self):
         super().__init__("G", colors.WHITE, "Gun Tower", "A basic tower that shoots enemies.")
 
+    def get_shop_icon(self):
+        return "Gun Twr"
+
 
 class WeaknessTower(Tower):
 
@@ -505,12 +526,21 @@ class WeaknessTower(Tower):
         super().__init__("W", colors.BLUE, "Weakness Tower",
                          "A tower that weakens enemies and makes them\ntake more damage.")
 
+    def get_shop_icon(self):
+        return "Weak Twr"
+
 
 class SlowTower(Tower):
 
     def __init__(self):
         super().__init__("S", colors.DARK_PURPLE, "Slowing Tower",
-                         "A tower that slows enemies.")
+                         "A tower that slows enemies.\nCan be upgraded to poison enemies.")
+
+    def get_shop_icon(self):
+        return "Slow Twr"
+
+    def get_upgrades(self):
+        return [PoisonTower()]
 
 
 class PoisonTower(Tower):
@@ -519,12 +549,18 @@ class PoisonTower(Tower):
         super().__init__("P", colors.PURPLE, "Poison Tower",
                          "A tower that poisons enemies.")
 
+    def get_shop_icon(self):
+        return "Pois Twr"
+
 
 class ExplosionTower(Tower):
 
     def __init__(self):
         super().__init__("E", colors.ORANGE, "Explosion Tower",
                          "A tower that deals damage to all enemies\nwithin its radius.")
+
+    def get_shop_icon(self):
+        return "Expl Twr"
 
 
 class EnemyFactory:
@@ -748,14 +784,15 @@ def _find_best_path_helper(entity, world, endpoints, start=None, or_adjacent_to=
 
 def get_towers_in_shop():
     return [
-        BuildBotSpawner(),
-        MineBotSpawner(),
-        ScavengerBotSpawner(),
-        GunTower(),
-        ExplosionTower(),
-        WeaknessTower(),
-        SlowTower(),
-        PoisonTower(),
-        WallTower()
+        lambda: BuildBotSpawner(),
+        lambda: MineBotSpawner(),
+        lambda: ScavengerBotSpawner(),
+        None,
+        lambda: GunTower(),
+        lambda: ExplosionTower(),
+        lambda: WeaknessTower(),
+        lambda: SlowTower(),
+        None,
+        lambda: WallTower()
     ]
 
