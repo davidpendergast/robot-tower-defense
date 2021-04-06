@@ -342,8 +342,12 @@ class InGameScene(Scene):
     def score_item(self, ent):
         if ent.is_stone_item():
             self.stones += 1
-            self.score += 10
+            self.score += 50
             # TODO play sound for scoring a stone
+        elif ent.is_gold_ingot():
+            self.cash += ent.get_sell_price()
+            self.score += ent.get_sell_price() * 10
+            # TODO play sound for scoring gold
 
     def update(self):
         if inputs.get_instance().was_pressed(pygame.K_SPACE):

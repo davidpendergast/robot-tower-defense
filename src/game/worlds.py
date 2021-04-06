@@ -564,5 +564,7 @@ def generate_world(w, h):
 
     res.set_pos(units.BuildBotSpawner(), (20, 10))
 
+    res.set_pos(units.GoldIngot(15), (3, 5))
+
     return res
 

@@ -301,7 +301,7 @@ class MineBot(Robot):
                 # TODO sound for picking up a stone
                 return True
         else:
-            for h in world.all_entities_adjacent_to(xy, cond=lambda e: e.is_heart()):
+            for _ in world.all_entities_adjacent_to(xy, cond=lambda e: e.is_heart()):
                 state.score_item(self.carrying_item)
                 self.carrying_item = None
                 return True
@@ -319,7 +319,27 @@ class ScavengerBot(Robot):
         super().__init__("☻", colors.YELLOW, "Scavenger-Bot", "A robot that collects and delivers gold.")
 
     def get_goal_locations(self, world, state):
-        return []
+        if self.carrying_item is not None:
+            # deliver gold to hearts
+            return [xy for xy in world.empty_cells_adjacent_to([world.get_pos(h) for h in world.all_hearts()])]
+        else:
+            # pick up gold
+            return [world.get_pos(e) for e in world.all_gold_ingots()]
+
+    def try_to_do_goal_action(self, world, state):
+        xy = world.get_pos(self)
+        if self.carrying_item is None:
+            for e in world.all_entities_in_cell(xy, cond=lambda e: e.is_gold_ingot()):
+                self.set_item_carrying(e)
+                world.remove(e)
+                # TODO sound for picking up a stone
+                return True
+        else:
+            for _ in world.all_entities_adjacent_to(xy, cond=lambda e: e.is_heart()):
+                state.score_item(self.carrying_item)
+                self.carrying_item = None
+                return True
+        return False
 
 
 class GoldIngot(worlds.Entity):
