@@ -273,7 +273,7 @@ class ShopButton(Button):
         if gold_cost > 0:
             price_tb.add("${}".format(gold_cost), color=colors.YELLOW if self.can_afford() else colors.DARK_GRAY)
         if gold_cost > 0 and stone_cost > 0:
-            price_tb.add("/", color=color if self.can_afford() else colors.DARK_GRAY)
+            price_tb.add("+", color=colors.LIGHT_GRAY if self.can_afford() else colors.DARK_GRAY)
         if stone_cost > 0:
             price_tb.add("{}".format(stone_cost), color=colors.LIGHT_GRAY if self.can_afford() else colors.DARK_GRAY)
         screen.add_text((x + w - len(price_tb.text), y), price_tb)

@@ -108,6 +108,9 @@ class BuildBotSpawner(RobotSpawner):
 
     def get_base_stats(self):
         res = super().get_base_stats()
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.BUY_PRICE] = 25
+        res[worlds.StatTypes.SELL_PRICE] = 10
         return res
 
 
@@ -122,6 +125,9 @@ class MineBotSpawner(RobotSpawner):
 
     def get_base_stats(self):
         res = super().get_base_stats()
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.BUY_PRICE] = 50
+        res[worlds.StatTypes.SELL_PRICE] = 20
         return res
 
 
@@ -136,6 +142,9 @@ class ScavengerBotSpawner(RobotSpawner):
 
     def get_base_stats(self):
         res = super().get_base_stats()
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.BUY_PRICE] = 150
+        res[worlds.StatTypes.SELL_PRICE] = 50
         return res
 
 
@@ -540,6 +549,11 @@ class WallTower(Tower):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.HP] = 250
+        res[worlds.StatTypes.STONE_PRICE] = 15
+        res[worlds.StatTypes.BUY_PRICE] = 0
+        res[worlds.StatTypes.SELL_PRICE] = 0
+        res[worlds.StatTypes.ARMOR] = 5
         return res
 
     def get_upgrades(self):
@@ -554,6 +568,9 @@ class DoorTower(Tower):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 2
+        res[worlds.StatTypes.STONE_PRICE] = 20
+        res[worlds.StatTypes.BUY_PRICE] = 50
+        res[worlds.StatTypes.SELL_PRICE] = 20
         return res
 
 
@@ -668,11 +685,6 @@ class AttackTower(Tower):
     def __init__(self, character, color, name, desc):
         super().__init__(character, color, name, desc)
 
-    def get_base_stats(self):
-        res = super().get_base_stats()
-        res[worlds.StatTypes.RANGE] = 2
-        return res
-
     def get_enemies_in_range(self, world):
         r = self.get_stat_value(worlds.StatTypes.RANGE)
         xy = world.get_pos(self)
@@ -700,6 +712,19 @@ class AttackTower(Tower):
         if hit_someone:
             self.animate(world, state)
 
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 2
+        res[worlds.StatTypes.BUY_PRICE] = 25
+        res[worlds.StatTypes.SELL_PRICE] = 15
+        res[worlds.StatTypes.STONE_PRICE] = 5
+        res[worlds.StatTypes.APS] = 2
+        res[worlds.StatTypes.HP] = 75
+        res[worlds.StatTypes.DAMAGE] = 5
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
 
 class GunTower(AttackTower):
 
@@ -708,6 +733,19 @@ class GunTower(AttackTower):
 
     def get_shop_icon(self):
         return "Gun Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 25
+        res[worlds.StatTypes.SELL_PRICE] = 15
+        res[worlds.StatTypes.STONE_PRICE] = 2
+        res[worlds.StatTypes.APS] = 2
+        res[worlds.StatTypes.HP] = 50
+        res[worlds.StatTypes.DAMAGE] = 15
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
 
 
 class WeaknessTower(AttackTower):
@@ -718,6 +756,19 @@ class WeaknessTower(AttackTower):
 
     def get_shop_icon(self):
         return "Weak Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 35
+        res[worlds.StatTypes.SELL_PRICE] = 20
+        res[worlds.StatTypes.STONE_PRICE] = 5
+        res[worlds.StatTypes.APS] = 1.5
+        res[worlds.StatTypes.HP] = 75
+        res[worlds.StatTypes.DAMAGE] = 3
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
 
 
 class SlowTower(AttackTower):
@@ -732,6 +783,19 @@ class SlowTower(AttackTower):
     def get_upgrades(self):
         return [PoisonTower()]
 
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 60
+        res[worlds.StatTypes.SELL_PRICE] = 15
+        res[worlds.StatTypes.STONE_PRICE] = 5
+        res[worlds.StatTypes.APS] = 1.75
+        res[worlds.StatTypes.HP] = 75
+        res[worlds.StatTypes.DAMAGE] = 5
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
 
 class PoisonTower(AttackTower):
 
@@ -741,6 +805,19 @@ class PoisonTower(AttackTower):
 
     def get_shop_icon(self):
         return "Pois Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 100
+        res[worlds.StatTypes.SELL_PRICE] = 50
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 2
+        res[worlds.StatTypes.HP] = 100
+        res[worlds.StatTypes.DAMAGE] = 8
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
 
 
 class ExplosionTower(AttackTower):
@@ -754,6 +831,19 @@ class ExplosionTower(AttackTower):
 
     def get_enemies_to_hit(self, world, scene):
         return self.get_enemies_in_range(world)
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 2
+        res[worlds.StatTypes.BUY_PRICE] = 75
+        res[worlds.StatTypes.SELL_PRICE] = 20
+        res[worlds.StatTypes.STONE_PRICE] = 8
+        res[worlds.StatTypes.APS] = 1.2
+        res[worlds.StatTypes.HP] = 65
+        res[worlds.StatTypes.DAMAGE] = 10
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
 
 
 class EnemyFactory:
@@ -791,8 +881,8 @@ class EnemyFactory:
 
         if name not in EnemyFactory.ENEMY_LOOKUP:
             stats = {
-                worlds.StatTypes.HP: 30,
-                worlds.StatTypes.APS: 2.5,
+                worlds.StatTypes.HP: 50,
+                worlds.StatTypes.APS: 1.5,
                 worlds.StatTypes.DAMAGE: 15,
                 worlds.StatTypes.ARMOR: 0,
                 worlds.StatTypes.AGGRESSION: 0,
