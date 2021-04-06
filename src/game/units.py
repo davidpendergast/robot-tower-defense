@@ -189,7 +189,8 @@ class Robot(Agent):
 
     def get_base_stats(self):
         res = super().get_base_stats()
-        res[worlds.StatTypes.MAX_CHARGE] = 32
+        res[worlds.StatTypes.MAX_CHARGE] = 64
+        res[worlds.StatTypes.APS] = 2.5
         return res
 
     def get_char(self):
@@ -269,7 +270,8 @@ class BuildBot(Robot):
 
     def get_base_stats(self):
         res = super().get_base_stats()
-
+        res[worlds.StatTypes.MAX_CHARGE] = 64
+        res[worlds.StatTypes.APS] = 2.5
         return res
 
     def get_goal_locations(self, world, state):
@@ -301,6 +303,12 @@ class MineBot(Robot):
             stone_locs.extend(rock_locs)
             return stone_locs
 
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.MAX_CHARGE] = 72
+        res[worlds.StatTypes.APS] = 1.5
+        return res
+
     def try_to_do_goal_action(self, world, state):
         xy = world.get_pos(self)
         if self.carrying_item is None:
@@ -326,6 +334,12 @@ class ScavengerBot(Robot):
 
     def __init__(self):
         super().__init__("☻", colors.YELLOW, "Scavenger-Bot", "A robot that collects and delivers gold.")
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.MAX_CHARGE] = 64
+        res[worlds.StatTypes.APS] = 2
+        return res
 
     def get_goal_locations(self, world, state):
         if self.carrying_item is not None:
@@ -461,7 +475,7 @@ class EnemySpawnZone(worlds.Entity):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 0
-        res[worlds.StatTypes.APS] = 0.25
+        res[worlds.StatTypes.APS] = 0.025
         return res
 
     def act(self, world, state):
@@ -481,6 +495,9 @@ class RockTower(Tower):
 
     def is_rock(self):
         return True
+
+    def get_shop_icon(self):
+        return "Rock"
 
     def get_base_color(self):
         return colors.LIGHT_GRAY if self.is_active() else colors.DARK_GRAY
@@ -513,9 +530,10 @@ class RockTower(Tower):
 
     def get_base_stats(self):
         res = super().get_base_stats()
-        res[worlds.StatTypes.HP] = 500
+        res[worlds.StatTypes.HP] = 200
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.APS] = 1
+        res[worlds.StatTypes.STONE_PRICE] = 85
         return res
 
     def get_upgrades(self):
@@ -551,7 +569,7 @@ class WallTower(Tower):
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.HP] = 250
         res[worlds.StatTypes.STONE_PRICE] = 15
-        res[worlds.StatTypes.BUY_PRICE] = 0
+        res[worlds.StatTypes.BUY_PRICE] = 15
         res[worlds.StatTypes.SELL_PRICE] = 0
         res[worlds.StatTypes.ARMOR] = 5
         return res
@@ -1091,6 +1109,7 @@ def get_towers_in_shop():
         lambda: WeaknessTower(),
         lambda: SlowTower(),
         None,
-        lambda: WallTower()
+        lambda: WallTower(),
+        lambda: RockTower()
     ]
 

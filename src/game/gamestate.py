@@ -295,8 +295,8 @@ class InGameScene(Scene):
         self.wave = 0
         self.wave_prog = 0
 
-        self.cash = 200
-        self.stones = 15
+        self.cash = 600
+        self.stones = 20
         self.score = 0
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 1,
