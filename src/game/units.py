@@ -379,17 +379,31 @@ class Enemy(Agent):
     def __init__(self, character, color, base_stats, name, description):
         self._base_stats = base_stats
         super().__init__(character, color, name, description)
+        self.current_path = []  # stored in reverse order
 
     def act(self, world, state):
-        heart_pts = [world.get_pos(h) for h in world.all_hearts()]
-        if len(heart_pts) > 0:
-            best_path = find_best_path_to(self, world, heart_pts,
-                                          or_adjacent_to=False,
-                                          action_provider=lambda xy: AttackAndMoveAction(xy))
-            if best_path is not None and len(best_path) > 0:
-                best_path[0].perform(self, world)
-                return
-        self.wander(world, state)
+        if len(self.current_path) > 0:
+            res = self.current_path[-1].perform(self, world)
+            if res is True:
+                self.current_path.pop(-1)
+            elif res is None:
+                pass  # we're attacking something
+            else:
+                self.current_path = []  # path got interrupted?
+        else:
+            heart_pts = [world.get_pos(h) for h in world.all_hearts()]
+            if len(heart_pts) > 0:
+                best_path = find_best_path_to(self, world, heart_pts,
+                                              or_adjacent_to=False,
+                                              action_provider=lambda xy: AttackAndMoveAction(xy))
+                if best_path is None:
+                    print("WARN: failed to find path to crystals: {}".format(self))
+                    self.wander(world, state)
+                else:
+                    best_path.reverse()
+                    self.current_path = best_path
+            else:
+                self.wander(world, state)
 
     def get_base_stats(self):
         res = {}

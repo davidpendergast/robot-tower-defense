@@ -299,7 +299,7 @@ class InGameScene(Scene):
         self.stones = 15
         self.score = 0
 
-        self._world = worlds.generate_world(const.W - self.shop_rect[2] - 2,
+        self._world = worlds.generate_world(const.W - self.shop_rect[2] - 1,
                                            const.H - self.info_rect[3] - 1)
         self._world_rect = [1, 1, self._world.w(), self._world.h()]
 
@@ -311,6 +311,17 @@ class InGameScene(Scene):
 
     def should_draw_tower_range(self, tower):
         return True
+
+    def is_game_over(self):
+        return self._world.is_game_over()
+
+    def get_center_message(self):
+        if self.is_paused():
+            return "*PAUSED*"
+        elif self.is_game_over():
+            return "GAME OVER!"
+        else:
+            return None
 
     def _build_buttons(self):
         res = []
@@ -484,7 +495,12 @@ class InGameScene(Scene):
             b.draw(screen)
 
     def _draw_overlays(self, screen):
-        pass
+        center_text = self.get_center_message()
+        if center_text is not None and (self.state.scene_ticks // 15 % 2) == 0:
+            lines = center_text.count("\n") + 1
+            pos = (self._world_rect[0] + (self._world_rect[2] - len(center_text)) // 2,
+                   self._world_rect[1] + (self._world_rect[3] - lines) // 2)
+            screen.add_text(pos, center_text, color=colors.WHITE, replace=True, ignore="")
 
     def draw(self, screen):
         self._world.draw(screen, (1, 1), self)

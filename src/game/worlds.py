@@ -110,6 +110,9 @@ class World:
         for e in self._caches["hearts"][1]:
             yield e
 
+    def is_game_over(self):
+        return len(self._caches["hearts"][1]) == 0
+
     def all_spawners(self):
         for e in self._caches["spawners"][1]:
             yield e
@@ -553,13 +556,17 @@ def generate_world(w, h):
     res = World(w, h)
 
     import src.game.units as units
-    res.set_pos(units.BuildBotSpawner(), (5, 5))
-    res.set_pos(units.HeartTower(), (6, 6))
 
-    res.set_pos(units.EnemySpawnZone(), (0, 0))
-    res.set_pos(units.EnemySpawnZone(), (0, 1))
-    res.set_pos(units.EnemySpawnZone(), (1, 0))
-    res.set_pos(units.EnemySpawnZone(), (1, 1))
+    for x in range(0, 4):
+        for y in range(0, 3):
+            res.set_pos(units.EnemySpawnZone(), (x, y))
+
+    end_pos = (int(2 * w / 3), int(3 * h / 4))
+    for x in range(0, 2):
+        for y in range(0, 2):
+            res.set_pos(units.HeartTower(), (end_pos[0] + x, end_pos[1] + y))
+
+    res.set_pos(units.BuildBotSpawner(), (5, 5))
 
     for i in range(0, 5):
         res.set_pos(units.RockTower(), res.rand_cell())
