@@ -792,8 +792,8 @@ class EnemyFactory:
         if name not in EnemyFactory.ENEMY_LOOKUP:
             stats = {
                 worlds.StatTypes.HP: 30,
-                worlds.StatTypes.APS: 1,
-                worlds.StatTypes.DAMAGE: 3,
+                worlds.StatTypes.APS: 2.5,
+                worlds.StatTypes.DAMAGE: 15,
                 worlds.StatTypes.ARMOR: 0,
                 worlds.StatTypes.AGGRESSION: 0,
                 worlds.StatTypes.DEATH_REWARD: reward,

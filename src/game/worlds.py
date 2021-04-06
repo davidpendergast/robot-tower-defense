@@ -517,7 +517,7 @@ class Entity:
         if self.perturbed_countdown > 0:
             self.perturbed_countdown -= 1
 
-        if not state.is_paused() and not state.should_skip_this_frame():
+        if not state.is_paused() and not state.is_game_over() and not state.should_skip_this_frame():
             if self._ticks_until_next_action <= 0:
                 self.act(world, state)
                 self._ticks_until_next_action = self._calc_ticks_until_next_action()

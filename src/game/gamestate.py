@@ -355,12 +355,12 @@ class InGameScene(Scene):
 
     def score_item(self, ent):
         if ent.is_stone_item():
-            self.stones += 1
+            self.stones += 5
             self.score += 50
             # TODO play sound for scoring a stone
         elif ent.is_gold_ingot():
             self.cash += ent.get_sell_price()
-            self.score += ent.get_sell_price() * 10
+            self.score += ent.get_sell_price()
             # TODO play sound for scoring gold
 
     def update(self):
@@ -368,6 +368,8 @@ class InGameScene(Scene):
             self.toggle_paused()
         if inputs.get_instance().was_pressed(pygame.K_TAB):
             self.increment_playback_speed()
+        if (self.is_paused() or self.is_game_over()) and inputs.get_instance().was_pressed(pygame.K_ESCAPE):
+            self.state.set_next_scene(TitleScene(self.state))
 
         mouse_xy = self.state.get_mouse_pos()
         old_hover_button = self.hovered_button
@@ -402,7 +404,9 @@ class InGameScene(Scene):
                 pass  # TODO play sound for selecting
 
     def handle_click(self, xy):
-        if self.hovered_button is not None:
+        if self.is_game_over():
+            pass  # ya done
+        elif self.hovered_button is not None:
             self.hovered_button.on_click()
         else:
             if self.selected_entity is None:
@@ -451,10 +455,10 @@ class InGameScene(Scene):
                     return b.get_associated_entity()
 
     def _draw_shop(self, screen):
-        if self.cash < 10000:
+        if self.cash < 1000000:
             cash_text = "Gold: ${}".format(self.cash)
         else:
-            cash_text = "Gold: $9999+"
+            cash_text = "Gold: $999999+"
         if self.stones < 1000:
             stones_text = "Stone: {}".format(self.stones)
         else:
@@ -489,6 +493,11 @@ class InGameScene(Scene):
         else:
             text = ent_to_show[0].get_info_text(w, in_world=ent_to_show[1] == "world")
             screen.add_text((x, y), text, replace=True)
+
+        if self.is_game_over():
+            esc_text = "Press [Escape] to Quit"
+            ex = x + (w - len(esc_text)) // 2
+            screen.add_text((ex, y + 3), esc_text, color=colors.DARK_GRAY, replace=True)
 
     def _draw_buttons(self, screen):
         for b in self.buttons:
