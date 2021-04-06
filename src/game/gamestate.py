@@ -300,7 +300,7 @@ class InGameScene(Scene):
         self.score = 0
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 2,
-                                           const.H - self.info_rect[3] - 2)
+                                           const.H - self.info_rect[3] - 1)
         self._world_rect = [1, 1, self._world.w(), self._world.h()]
 
         self.selected_entity = None  # (Entity, str=("world", "shop"))
@@ -308,6 +308,9 @@ class InGameScene(Scene):
 
         self.hovered_button = None
         self.buttons = self._build_buttons()
+
+    def should_draw_tower_range(self, tower):
+        return True
 
     def _build_buttons(self):
         res = []

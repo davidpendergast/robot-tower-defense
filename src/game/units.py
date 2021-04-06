@@ -656,7 +656,7 @@ class AttackTower(Tower):
 
     def get_base_stats(self):
         res = super().get_base_stats()
-        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.RANGE] = 2
         return res
 
     def get_enemies_in_range(self, world):
@@ -670,6 +670,9 @@ class AttackTower(Tower):
             return [random.choice(enemies)]
         else:
             return []
+
+    def is_attack_tower(self):
+        return True
 
     def animate(self, world, scene):
         self.perturb_color(colors.WHITE, duration=10)

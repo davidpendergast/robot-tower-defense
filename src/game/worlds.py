@@ -209,9 +209,23 @@ class World:
                     else:
                         drew_any = True
                         ent.draw((pos[0] + x, pos[0] + y), screen, mode=state.get_view_mode())
+                        if ent.is_attack_tower() and state.should_draw_tower_range(ent):
+                            self.draw_tower_range(ent, screen, pos)
                 if not drew_any:
                     for d in decs:
                         d.draw((pos[0] + x, pos[0] + y), screen, mode=state.get_view_mode())
+
+    def draw_tower_range(self, tower, screen, pos):
+        xy = self.get_pos(tower)
+        r = tower.get_stat_value(StatTypes.RANGE)
+        color = util.Utils.linear_interp(tower.get_base_color(), colors.BLACK, 0.5)
+        for n in self.all_cells_in_range(xy, r):
+            dont_draw = False
+            for _ in self.all_entities_in_cell(n, cond=lambda e: not e.is_decoration()):
+                dont_draw = True
+                break
+            if not dont_draw:
+                screen.add((pos[0] + n[0], pos[0] + n[1]), "░", color=color)
 
 
 _ENTITY_ID_COUNTER = 0
@@ -479,6 +493,9 @@ class Entity:
         return False
 
     def is_tower(self):
+        return False
+
+    def is_attack_tower(self):
         return False
 
     def is_rock(self):
