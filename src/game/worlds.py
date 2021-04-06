@@ -153,7 +153,8 @@ class World:
         for xy in xys:
             for n in util.Utils.rand_neighbors(xy):
                 if self.is_valid(n) and n not in xys and n not in res:
-                    if empty_for is None and self.get_solidity(n) == 0 or self.can_move_to(empty_for, n):
+                    if ((empty_for is None and self.get_solidity(n) == 0)
+                            or (empty_for is not None and self.can_move_to(empty_for, n))):
                         res.add(n)
         return res
 
@@ -279,6 +280,7 @@ class StatTypes:
     REPAIRABLE = StatType("Repairable", lambda v: "Cannot be repaired" if v <= 0 else "", colors.LIGHT_GRAY, 0)
     BUILD_SPEED = StatType("Build Speed", lambda v: "Build Speed: {}/sec".format(v), colors.LIGHT_GRAY, 0)
     AGGRESSION = StatType("Aggression", lambda v: "Aggression: {}".format(v), colors.RED, 0)
+    DEATH_REWARD = StatType("Death Reward", lambda v: "Bounty: {}".format(v), colors.YELLOW, 0)
 
 
 def make_stats(max_hp=None, actions_per_sec=None, damage=None, sell_price=None, cost=None):
@@ -337,6 +339,9 @@ class Entity:
             return self.stats[stat_type]
         else:
             return 0
+
+    def set_stat_value(self, stat_type, val):
+        self.stats[stat_type] = val
 
     def ticks_per_action(self):
         aps = self.get_stat_value(StatTypes.APS)
@@ -402,8 +407,11 @@ class Entity:
     def take_damage_from(self, damage, other):
         self.set_hp(self.get_hp() - damage)
         if damage > 0:
-            self.perturb_color(other.get_color(), 10)
-            # TODO noise for taking damage
+            self.animate_damage_from(other)
+
+    def animate_damage_from(self, other):
+        self.perturb_color(other.get_color(), 10)
+        # TODO noise for taking damage
 
     def get_aggression_discount(self):
         """More aggressive = less cost to attack"""
@@ -523,7 +531,7 @@ class Entity:
             return False
 
 
-def generate_world2(w, h):
+def generate_world(w, h):
     # TODO some sweet world generation code
     res = World(w, h)
 
@@ -553,7 +561,7 @@ def generate_world2(w, h):
     return res
 
 
-def generate_world(w, h):
+def generate_world3(w, h):
     # TODO some sweet world generation code
     res = World(w, h)
 

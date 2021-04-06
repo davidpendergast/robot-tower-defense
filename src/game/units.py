@@ -401,6 +401,27 @@ class Enemy(Agent):
                 res[s] = super_stats[s]
         return res
 
+    def animate_damage_from(self, other):
+        self.perturb_color(colors.WHITE, 10)
+        # TODO noise for taking damage
+
+    def on_death(self, world, scene):
+        price = self.get_sell_price()
+        xy = world.get_pos(self)
+        if price > 0:
+            added_gold = False
+            for gold in world.all_entities_in_cell(xy, cond=lambda e: e.is_gold_ingot()):
+                old_price = gold.get_sell_price()
+                gold.set_stat_value(worlds.StatTypes.SELL_PRICE, old_price + price)
+                added_gold = True
+                break
+            if not added_gold:
+                world.set_pos(GoldIngot(price), xy)
+
+        direct_reward = self.get_stat_value(worlds.StatTypes.DEATH_REWARD)
+        if direct_reward > 0:
+            scene.score_item(GoldIngot(direct_reward))
+
     def is_enemy(self):
         return True
 
@@ -628,7 +649,42 @@ class UpgradeMarker(BuildMarker):
         # TODO sound for upgrading
 
 
-class GunTower(Tower):
+class AttackTower(Tower):
+
+    def __init__(self, character, color, name, desc):
+        super().__init__(character, color, name, desc)
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        return res
+
+    def get_enemies_in_range(self, world):
+        r = self.get_stat_value(worlds.StatTypes.RANGE)
+        xy = world.get_pos(self)
+        return [e for e in world.all_entities_in_range(xy, r, cond=lambda _e: _e.is_enemy())]
+
+    def get_enemies_to_hit(self, world, scene):
+        enemies = self.get_enemies_in_range(world)
+        if len(enemies) > 0:
+            return [random.choice(enemies)]
+        else:
+            return []
+
+    def animate(self, world, scene):
+        self.perturb_color(colors.WHITE, duration=10)
+
+    def act(self, world, state):
+        hit_someone = False
+        for e in self.get_enemies_to_hit(world, state):
+            self.give_damage_to(e)
+            hit_someone = True
+
+        if hit_someone:
+            self.animate(world, state)
+
+
+class GunTower(AttackTower):
 
     def __init__(self):
         super().__init__("G", colors.BROWN, "Gun Tower", "A basic tower that shoots enemies.")
@@ -636,11 +692,8 @@ class GunTower(Tower):
     def get_shop_icon(self):
         return "Gun Twr"
 
-    def perform_action(self, world, state):
-        pass
 
-
-class WeaknessTower(Tower):
+class WeaknessTower(AttackTower):
 
     def __init__(self):
         super().__init__("W", colors.BLUE, "Weakness Tower",
@@ -650,7 +703,7 @@ class WeaknessTower(Tower):
         return "Weak Twr"
 
 
-class SlowTower(Tower):
+class SlowTower(AttackTower):
 
     def __init__(self):
         super().__init__("S", colors.DARK_PURPLE, "Slowing Tower",
@@ -663,7 +716,7 @@ class SlowTower(Tower):
         return [PoisonTower()]
 
 
-class PoisonTower(Tower):
+class PoisonTower(AttackTower):
 
     def __init__(self):
         super().__init__("P", colors.PURPLE, "Poison Tower",
@@ -673,7 +726,7 @@ class PoisonTower(Tower):
         return "Pois Twr"
 
 
-class ExplosionTower(Tower):
+class ExplosionTower(AttackTower):
 
     def __init__(self):
         super().__init__("E", colors.ORANGE, "Explosion Tower",
@@ -681,6 +734,9 @@ class ExplosionTower(Tower):
 
     def get_shop_icon(self):
         return "Expl Twr"
+
+    def get_enemies_to_hit(self, world, scene):
+        return self.get_enemies_in_range(world)
 
 
 class EnemyFactory:
@@ -698,15 +754,23 @@ class EnemyFactory:
         if difficulty == 0:
             name = random.choice(EnemyFactory.EASY_ENEMIES)
             adj = "A weak entity"
+            reward = 0
+            gold_drop_chance = 0.01
         elif difficulty == 1:
             name = random.choice(EnemyFactory.MEDIUM_ENEMIES)
             adj = "An entity"
+            reward = 10
+            gold_drop_chance = 0.05
         elif difficulty == 2:
             name = random.choice(EnemyFactory.HARD_ENEMIES)
             adj = "An otherworldly entity"
+            reward = 20
+            gold_drop_chance = 0.25
         else:
             name = random.choice(EnemyFactory.LEGENDARY_ENEMIES)
             adj = "A legendary entity"
+            reward = 50
+            gold_drop_chance = 1.0
 
         if name not in EnemyFactory.ENEMY_LOOKUP:
             stats = {
@@ -714,7 +778,8 @@ class EnemyFactory:
                 worlds.StatTypes.APS: 1,
                 worlds.StatTypes.DAMAGE: 3,
                 worlds.StatTypes.ARMOR: 0,
-                worlds.StatTypes.AGGRESSION: 0
+                worlds.StatTypes.AGGRESSION: 0,
+                worlds.StatTypes.DEATH_REWARD: reward,
             }
             # TODO generate stats
             EnemyFactory.ENEMY_LOOKUP[name] = stats
@@ -722,7 +787,13 @@ class EnemyFactory:
 
         res = []
         for _ in range(0, n):
-            res.append(Enemy(name, colors.RED, stats, "Enemy", "{} known only as \"{}\".".format(adj, name)))
+            stat_copy = stats.copy()
+
+            if random.random() < gold_drop_chance:
+                dropped_gold = random.randint(3, 10) * 10
+                stat_copy[worlds.StatTypes.SELL_PRICE] = dropped_gold
+
+            res.append(Enemy(name, colors.RED, stat_copy, "Enemy", "{} known only as \"{}\".".format(adj, name)))
 
         return res
 
