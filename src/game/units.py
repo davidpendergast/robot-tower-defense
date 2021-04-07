@@ -19,6 +19,15 @@ class Tower(worlds.Entity):
         res[worlds.StatTypes.STONE_PRICE] = 5
         return res
 
+    def get_stone_cost(self, world):
+        base_cost = super().get_stone_cost(world)
+        if base_cost > 0:
+            cnt = sum([1 for twr in world.all_towers() if twr.get_name() == self.get_name()])
+            cnt += sum([1 for bm in world.all_build_markers() if (bm.is_new_build_marker() and bm.target.get_name() == self.get_name())])
+            return min(99, base_cost + cnt)
+        else:
+            return base_cost
+
     def get_shop_icon(self):
         return self.character
 
@@ -77,9 +86,8 @@ class RobotSpawner(Tower):
     def act(self, world, state):
         my_xy = world.get_pos(self)
 
-        if self._my_robot is None or self._my_robot.is_dead():
+        if self._my_robot is None or self._my_robot.is_dead() or world.get_pos(self._my_robot) is None:
             self.build_countup += 1
-            actions_per_build = configs.target_fps / self.get_stat_value(worlds.StatTypes.BUILD_SPEED)
             ticks_per_build = self.ticks_per_action()
             if self.build_countup >= ticks_per_build:
                 self._my_robot = self.robot_producer()
@@ -109,7 +117,7 @@ class BuildBotSpawner(RobotSpawner):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.STONE_PRICE] = 0
-        res[worlds.StatTypes.BUY_PRICE] = 25
+        res[worlds.StatTypes.BUY_PRICE] = 120
         res[worlds.StatTypes.SELL_PRICE] = 10
         return res
 
@@ -126,7 +134,7 @@ class MineBotSpawner(RobotSpawner):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.STONE_PRICE] = 0
-        res[worlds.StatTypes.BUY_PRICE] = 50
+        res[worlds.StatTypes.BUY_PRICE] = 150
         res[worlds.StatTypes.SELL_PRICE] = 20
         return res
 
@@ -143,7 +151,7 @@ class ScavengerBotSpawner(RobotSpawner):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.STONE_PRICE] = 0
-        res[worlds.StatTypes.BUY_PRICE] = 150
+        res[worlds.StatTypes.BUY_PRICE] = 200
         res[worlds.StatTypes.SELL_PRICE] = 50
         return res
 
@@ -370,7 +378,7 @@ class GoldIngot(worlds.Entity):
     def __init__(self, value):
         self.value = value
         super().__init__("$", colors.DARK_YELLOW, "Gold Bar (${})".format(self.value),
-                         "A valuable piece of gold.\nCan be delivered to an energy crystal for ${}.".format(self.value))
+                         "A valuable piece of gold.\nCan be delivered to an energy crystal.")
 
     def is_gold_ingot(self):
         return True
@@ -403,6 +411,9 @@ class Enemy(Agent):
         self._base_stats = base_stats
         super().__init__(character, color, name, description)
         self.current_path = []  # stored in reverse order
+
+    def forget_path(self):
+        self.current_path = []
 
     def act(self, world, state):
         if len(self.current_path) > 0:
@@ -480,14 +491,10 @@ class EnemySpawnZone(worlds.Entity):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 0
-        res[worlds.StatTypes.APS] = 0.025
         return res
 
     def act(self, world, state):
-        xy = world.get_pos(self)
-        if len([e for e in world.all_entities_in_cell(xy, cond=lambda _e: _e.is_enemy())]) == 0:
-            new_enemy = EnemyFactory.generate_random_enemies(random.randint(0, 4), random.randint(0, 25), n=1)[0]
-            world.set_pos(new_enemy, xy)
+        pass
 
 
 class RockTower(Tower):
@@ -638,20 +645,31 @@ class BuildMarker(worlds.Entity):
         res[worlds.StatTypes.SOLIDITY] = 0
         return res
 
+    def is_new_build_marker(self):
+        return False
+
 
 class BuildNewMarker(BuildMarker):
     def __init__(self, target):
         super().__init__(target)
         self.scene_ticks = 0
 
+    def is_new_build_marker(self):
+        return True
+
     def perform_action(self, world, state):
         xy = world.get_pos(self)
-        world.remove(self)
+
+        # surely this won't cause problems~
+        to_remove = [e for e in world.all_entities_in_cell(xy)]
+        for e in to_remove:
+            world.remove(e)
+
         world.set_pos(self.target, xy)
 
     def refund(self, world, state):
         gold_refund = self.target.get_gold_cost()
-        stone_refund = self.target.get_stone_cost()
+        stone_refund = self.target.get_stone_cost(world)
         state.cash += gold_refund
         state.stone += stone_refund
         # TODO play sound for undoing a build command
@@ -783,9 +801,9 @@ class WeaknessTower(AttackTower):
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.RANGE] = 3
-        res[worlds.StatTypes.BUY_PRICE] = 35
+        res[worlds.StatTypes.BUY_PRICE] = 95
         res[worlds.StatTypes.SELL_PRICE] = 20
-        res[worlds.StatTypes.STONE_PRICE] = 5
+        res[worlds.StatTypes.STONE_PRICE] = 7
         res[worlds.StatTypes.APS] = 1.5
         res[worlds.StatTypes.HP] = 75
         res[worlds.StatTypes.DAMAGE] = 3
@@ -810,8 +828,8 @@ class SlowTower(AttackTower):
         res = super().get_base_stats()
         res[worlds.StatTypes.RANGE] = 3
         res[worlds.StatTypes.BUY_PRICE] = 60
-        res[worlds.StatTypes.SELL_PRICE] = 15
-        res[worlds.StatTypes.STONE_PRICE] = 5
+        res[worlds.StatTypes.SELL_PRICE] = 70
+        res[worlds.StatTypes.STONE_PRICE] = 9
         res[worlds.StatTypes.APS] = 1.75
         res[worlds.StatTypes.HP] = 75
         res[worlds.StatTypes.DAMAGE] = 5
@@ -860,13 +878,108 @@ class ExplosionTower(AttackTower):
         res[worlds.StatTypes.RANGE] = 2
         res[worlds.StatTypes.BUY_PRICE] = 75
         res[worlds.StatTypes.SELL_PRICE] = 20
-        res[worlds.StatTypes.STONE_PRICE] = 8
+        res[worlds.StatTypes.STONE_PRICE] = 4
         res[worlds.StatTypes.APS] = 1.2
         res[worlds.StatTypes.HP] = 65
         res[worlds.StatTypes.DAMAGE] = 10
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
         return res
+
+
+class EnemySpawnController:
+
+    def __init__(self):
+        self.level = 1
+        self._current_wave = []
+
+    def get_wave(self):
+        return self.level - 1
+
+    def _gen_wave(self):
+
+        pts = 3 + self.level
+        if self.level <= 5:
+            difficulty = 0
+            n = 2 + self.level
+        elif self.level % 20 == 0:
+            difficulty = 3
+            pts = pts * 2
+            n = self.level // 2
+        elif self.level % 10 == 0:
+            difficulty = 2
+            pts = int(pts * 1.5)
+            n = 3 + self.level // 5
+        elif self.level > 7 and random.random() < 0.5:
+            difficulty = 1
+            pts = int(pts * 1.25)
+            n = 5 + self.level // 3
+        else:
+            difficulty = 0
+            n = 8 + self.level // 2
+
+        n_per_pulse = 1
+        if self.level > 20 and random.random() < 0.25:
+            n_per_pulse = 2
+        elif self.level > 30 and random.random() < 0.25:
+            n_per_pulse = 3
+        elif self.level > 40 and random.random() < 0.25:
+            n_per_pulse = 4
+        elif self.level > 50 and random.random() < 0.25:
+            n_per_pulse = 5
+
+        max_pulse_delay = 4 * configs.target_fps
+        min_pulse_delay = int(0.25 * configs.target_fps)
+        max_level = 100
+        pulse_delay = int(util.Utils.linear_interp(max_pulse_delay, min_pulse_delay, min(1.0, self.level / max_level)))
+        pulse_delay += int(random.random() * configs.target_fps / 2)
+
+        max_wave_delay = 8 * configs.target_fps
+        end_of_wave_delay = int(util.Utils.linear_interp(max_wave_delay, min_pulse_delay, min(1.0, self.level / max_level)))
+
+        enemies = EnemyFactory.generate_random_enemies(difficulty, 3 + self.level // 3, n=n)
+
+        print("INFO: Wave {} Enemy: {}".format(self.level, enemies[0].get_base_stats()))
+
+        new_wave = []
+        if self.level == 1:
+            # 5 second delay at the start of the game
+            new_wave.append(configs.target_fps * 6)
+
+        while len(enemies) > 0:
+            pulse = []
+            for i in range(0, n_per_pulse):
+                if len(enemies) > 0:
+                    pulse.append(enemies.pop(-1))
+            new_wave.append(pulse)
+            if len(enemies) > 0:
+                new_wave.append(pulse_delay)
+        new_wave.append(end_of_wave_delay)
+        new_wave.reverse()  # so that we can pop off the end
+        self._current_wave = new_wave
+
+    def update(self, world):
+        if len(self._current_wave) == 0:
+            self._gen_wave()
+            self.level += 1
+        else:
+            cur_item = self._current_wave[-1]
+            if isinstance(cur_item, int):
+                if cur_item <= 0:
+                    self._current_wave.pop(-1)
+                else:
+                    self._current_wave[-1] = cur_item - 1
+            else:
+                # it's a list of enemies
+                spawn_pads = [world.get_pos(spw) for spw in world.all_spawn_zones()]
+                if len(spawn_pads) >= len(cur_item):
+                    spawn_locs = random.choices(spawn_pads, k=len(cur_item))
+                else:
+                    spawn_locs = [random.choice(spawn_pads) for _ in range(len(cur_item))]
+
+                for i in range(len(cur_item)):
+                    world.set_pos(cur_item[i], spawn_locs[i])
+                self._current_wave.pop(-1)
 
 
 class EnemyFactory:
@@ -876,51 +989,72 @@ class EnemyFactory:
     HARD_ENEMIES = "αßΓπΣσµτΦΘΩδ∞φε∩≡"
     LEGENDARY_ENEMIES = "£¥₧ƒÄÅÉÆÇ"
 
-    ENEMY_LOOKUP = {}
-
     @staticmethod
     def generate_random_enemies(difficulty, pts, n=1):
-
         if difficulty == 0:
             name = random.choice(EnemyFactory.EASY_ENEMIES)
             adj = "A weak entity"
-            reward = 0
+            reward = 3
             gold_drop_chance = 0.01
         elif difficulty == 1:
             name = random.choice(EnemyFactory.MEDIUM_ENEMIES)
             adj = "An entity"
-            reward = 10
+            reward = 5
             gold_drop_chance = 0.05
         elif difficulty == 2:
             name = random.choice(EnemyFactory.HARD_ENEMIES)
             adj = "An otherworldly entity"
-            reward = 20
+            reward = 10
             gold_drop_chance = 0.25
         else:
             name = random.choice(EnemyFactory.LEGENDARY_ENEMIES)
             adj = "A legendary entity"
-            reward = 50
+            reward = 20
             gold_drop_chance = 1.0
 
-        if name not in EnemyFactory.ENEMY_LOOKUP:
-            stats = {
-                worlds.StatTypes.HP: 50,
-                worlds.StatTypes.APS: 1.5,
-                worlds.StatTypes.DAMAGE: 15,
-                worlds.StatTypes.ARMOR: 0,
-                worlds.StatTypes.AGGRESSION: 0,
-                worlds.StatTypes.DEATH_REWARD: reward,
-            }
-            # TODO generate stats
-            EnemyFactory.ENEMY_LOOKUP[name] = stats
-        stats = EnemyFactory.ENEMY_LOOKUP[name]
+        stats = {
+            worlds.StatTypes.HP: 50,
+            worlds.StatTypes.APS: 1.5,
+            worlds.StatTypes.DAMAGE: 10,
+            worlds.StatTypes.ARMOR: 0,
+            worlds.StatTypes.AGGRESSION: 0,
+            worlds.StatTypes.DEATH_REWARD: reward,
+            worlds.StatTypes.VAMPRISM: 0,
+            worlds.StatTypes.RAMPAGE: 1
+        }
+
+        increase_per_pt = {
+            worlds.StatTypes.HP: 15,
+            worlds.StatTypes.APS: 0.25,
+            worlds.StatTypes.DAMAGE: 3,
+            worlds.StatTypes.ARMOR: 1,
+            worlds.StatTypes.AGGRESSION: 0.25,
+            worlds.StatTypes.VAMPRISM: 10,
+            worlds.StatTypes.RAMPAGE: 1,
+        }
+
+        for _ in range(0, pts // 3):
+            stats[worlds.StatTypes.HP] += increase_per_pt[worlds.StatTypes.HP]
+
+        max_vals = {
+            worlds.StatTypes.APS: 4,
+            worlds.StatTypes.AGGRESSION: 1.0,
+            worlds.StatTypes.VAMPRISM: 80,
+            worlds.StatTypes.RAMPAGE: 3,
+        }
+
+        for pt in range(pts):
+            choices = [s for s in stats if (s in increase_per_pt and (s not in max_vals or stats[s] < max_vals[s]))]
+            if len(choices) > 0:
+                stat_to_inc = random.choice(choices)
+                stats[stat_to_inc] += increase_per_pt[stat_to_inc]
 
         res = []
         for _ in range(0, n):
             stat_copy = stats.copy()
 
             if random.random() < gold_drop_chance:
-                dropped_gold = random.randint(3, 10) * 10
+                dropped_gold = random.randint(1, 5) * 10
                 stat_copy[worlds.StatTypes.SELL_PRICE] = dropped_gold
 
             res.append(Enemy(name, colors.RED, stat_copy, "Enemy", "{} known only as \"{}\".".format(adj, name)))
@@ -1015,7 +1149,7 @@ class AttackAndMoveAction(MoveToAction):
                 a = (ramp / 2)
                 b = (dmg - ramp / 2)
                 c = -cur_hp
-                x = (-b + math.sqrt(b*b - 4*a*c)) / 2*a
+                x = (-b + math.sqrt(b*b - 4*a*c)) / (2*a)
 
             aggression_mult = e.get_aggression_discount()
 

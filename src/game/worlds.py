@@ -9,7 +9,7 @@ import src.game.ascii_screen as ascii_screen
 
 class World:
 
-    def __init__(self, w, h):
+    def __init__(self, w, h, spawn_controller):
         self.cells = []
         self._w = w
         self._h = h
@@ -22,10 +22,14 @@ class World:
                         "robots": (lambda x: x.is_robot(), {}),
                         "towers": (lambda x: x.is_tower(), {}),
                         "spawners": (lambda x: x.is_spawner(), {}),
+                        "spawn_zones": (lambda x: x.is_spawn_zone(), {}),
                         "rocks": (lambda x: x.is_rock(), {}),
                         "stone_items": (lambda x: x.is_stone_item(), {}),
                         "gold_ingots": (lambda x: x.is_gold_ingot(), {}),
                         "build_markers": (lambda x: x.is_build_marker(), {})}
+
+        self.enemy_spawn_controller = spawn_controller
+        self.refresh_enemy_paths = False
 
     def w(self):
         return self._w
@@ -42,6 +46,9 @@ class World:
 
     def is_valid(self, xy):
         return 0 <= xy[0] < self.w() and 0 <= xy[1] < self.h()
+
+    def get_wave(self):
+        return self.enemy_spawn_controller.get_wave()
 
     def can_move_to(self, ent, xy):
         if ent.is_robot():
@@ -93,6 +100,8 @@ class World:
             old_pos = self.positions[entity]
             del self.positions[entity]
             self._remove_from_cell(entity, old_pos)
+            if entity.is_tower():
+                self.refresh_enemy_paths = True
 
         for cache_key in self._caches:
             if entity in self._caches[cache_key][1]:
@@ -115,6 +124,7 @@ class World:
             import src.game.units as units
             print("INFO: requested to build {} at {}".format(entity, xy))
             self.set_pos(units.BuildNewMarker(entity), xy)
+            self.refresh_enemy_paths = True
             return True
         return False
 
@@ -127,6 +137,10 @@ class World:
 
     def all_spawners(self):
         for e in self._caches["spawners"][1]:
+            yield e
+
+    def all_spawn_zones(self):
+        for e in self._caches["spawn_zones"][1]:
             yield e
 
     def all_enemies(self):
@@ -183,13 +197,22 @@ class World:
         for ent in to_update:
             # make sure it hasn't died during the action of another entity
             if ent in self.positions:
+                if self.refresh_enemy_paths and ent.is_enemy():
+                    # force enemies to refresh if the geometry of the world has changed
+                    ent.forget_path()
+
                 ent.update(self, scene)
+
+        self.refresh_enemy_paths = False
 
         if not scene.is_paused():
             to_remove = [ent for ent in self.positions if ent.is_dead()]
             for ent in to_remove:
                 ent.on_death(self, scene)
                 self.remove(ent)
+
+            if not scene.is_game_over():
+                self.enemy_spawn_controller.update(self)
 
     def all_entities_in_cell(self, xy, cond=None):
         if xy not in self.cells:
@@ -268,6 +291,9 @@ class StatType:
         self.color = color
         self.default_val = default_val
         ALL_STAT_TYPES.append(self)
+
+    def __repr__(self):
+        return self.name
 
     def __eq__(self, other):
         if isinstance(other, StatType):
@@ -445,12 +471,12 @@ class Entity:
     def get_aggression_discount(self):
         """More aggressive = less cost to attack"""
         aggro = self.get_stat_value(StatTypes.AGGRESSION)
-        return util.Utils.bound(1 - (aggro / 10), 0, 2)
+        return util.Utils.bound(1 - aggro, 0, 1)
 
     def get_gold_cost(self):
         return self.get_stat_value(StatTypes.BUY_PRICE)
 
-    def get_stone_cost(self):
+    def get_stone_cost(self, world):
         return self.get_stat_value(StatTypes.STONE_PRICE)
 
     def get_sell_price(self):
@@ -502,6 +528,7 @@ class Entity:
         return False
 
     def is_spawner(self):
+        """this (confusingly) refers to towers that spawn bots"""
         return False
 
     def is_enemy(self):
@@ -566,9 +593,9 @@ class Entity:
             return False
 
 
-def generate_world(w, h):
+def generate_world(w, h, spawner):
     # TODO some sweet world generation code
-    res = World(w, h)
+    res = World(w, h, spawner)
 
     import src.game.units as units
 
@@ -581,21 +608,26 @@ def generate_world(w, h):
         for y in range(0, 2):
             res.set_pos(units.HeartTower(), (end_pos[0] + x, end_pos[1] + y))
 
-    res.set_pos(units.BuildBotSpawner(), (5, 5))
+    res.set_pos(units.BuildBotSpawner(), (w // 2 - 1, h // 2))
+    res.set_pos(units.MineBotSpawner(), (w // 2 + 3, h // 2 - 2))
 
-    for i in range(0, 5):
-        res.set_pos(units.RockTower(), res.rand_cell())
+    for i in range(0, 7):
+        pos = res.rand_cell()
+        rock_tower = units.RockTower()
+        while not res.can_build_at(rock_tower, pos):
+            pos = res.rand_cell()
+        res.set_pos(rock_tower, pos)
 
-    for i in range(0, 3):
-        res.set_pos(units.GoldOreTower(), res.rand_cell())
+    #for i in range(0, 3):
+    #    res.set_pos(units.GoldOreTower(), res.rand_cell())
 
-    for _ in range(0, 2):
-        for tower_provider in units.get_towers_in_shop():
-            if tower_provider is not None:
-                tower = tower_provider()
-                res.set_pos(tower, res.rand_cell())
-                for upgrade in tower.get_upgrades():
-                    res.set_pos(upgrade, res.rand_cell())
+    #for _ in range(0, 2):
+    #    for tower_provider in units.get_towers_in_shop():
+    #        if tower_provider is not None:
+    #            tower = tower_provider()
+    #            res.set_pos(tower, res.rand_cell())
+    #            for upgrade in tower.get_upgrades():
+    #                res.set_pos(upgrade, res.rand_cell())
 
     return res
 

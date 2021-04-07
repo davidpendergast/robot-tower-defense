@@ -13,6 +13,7 @@ import src.engine.inputs as inputs
 import src.utils.textutils as textutils
 import src.game.worlds as worlds
 import src.utils.util as utils
+import src.game.units as units
 
 
 class GameState:
@@ -163,7 +164,6 @@ class InstructionsScene(Scene):
 
     def __init__(self, state):
         super().__init__(state)
-        import src.game.units as units
         crystal = units.HeartTower()
         buildbot = units.BuildBot()
         self.instructions = sprites.TextBuilder(color=colors.LIGHT_GRAY)
@@ -233,11 +233,11 @@ class ShopButton(Button):
     def get_gold_cost(self):
         return self._tower_example.get_stat_value(worlds.StatTypes.BUY_PRICE)
 
-    def get_stone_cost(self):
-        return self._tower_example.get_stat_value(worlds.StatTypes.STONE_PRICE)
+    def get_stone_cost(self, world):
+        return self._tower_example.get_stone_cost(world)
 
     def can_afford(self):
-        return self.scene.cash >= self.get_gold_cost() and self.scene.stones >= self.get_stone_cost()
+        return self.scene.cash >= self.get_gold_cost() and self.scene.stones >= self.get_stone_cost(self.scene._world)
 
     def is_selected(self):
         current_sel = self.scene.selected_entity
@@ -257,8 +257,8 @@ class ShopButton(Button):
     def draw(self, screen):
         icon = self._tower_example.get_shop_icon()
         color = self._tower_example.get_color()
-        gold_cost = self._tower_example.get_stat_value(worlds.StatTypes.BUY_PRICE)
-        stone_cost = self._tower_example.get_stat_value(worlds.StatTypes.STONE_PRICE)
+        gold_cost = self._tower_example.get_gold_cost()
+        stone_cost = self._tower_example.get_stone_cost(self.scene._world)
         x = self.rect[0]
         w = self.rect[2]
         y = self.rect[1]
@@ -299,12 +299,14 @@ class InGameScene(Scene):
         self.wave_prog = 0
         self.kills = 0
 
-        self.cash = 600
-        self.stones = 20
+        self.cash = 100
+        self.stones = 5
         self.score = 0
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 1,
-                                           const.H - self.info_rect[3] - 1)
+                                            const.H - self.info_rect[3] - 1,
+                                            units.EnemySpawnController())
+
         self._world_rect = [1, 1, self._world.w(), self._world.h()]
 
         self.selected_entity = None  # (Entity, str=("world", "shop"))
@@ -343,7 +345,6 @@ class InGameScene(Scene):
 
     def _build_buttons(self):
         res = []
-        import src.game.units as units
         x = self.shop_rect[0] + 1
         y = self.shop_rect[1] + 4
         w = self.shop_rect[2] - 2
@@ -373,7 +374,7 @@ class InGameScene(Scene):
 
     def score_item(self, ent):
         if ent.is_stone_item():
-            self.stones += 5
+            self.stones += 1
             self.score += 50
             # TODO play sound for scoring a stone
         elif ent.is_gold_ingot():
@@ -451,9 +452,11 @@ class InGameScene(Scene):
                             self.set_selected(None)
                     elif self.selected_entity[1] == "shop":
                         # we're currently trying to buy something, and we clicked in world
+                        stone_cost = self.selected_entity[0].get_stone_cost(self._world)
+                        gold_cost = self.selected_entity[0].get_gold_cost()
                         if self._world.request_build_at(self.selected_entity[0], world_xy):
-                            self.cash -= self.selected_entity[0].get_gold_cost()
-                            self.stones -= self.selected_entity[0].get_stone_cost()
+                            self.cash -= gold_cost
+                            self.stones -= stone_cost
                             self.set_selected(None)
                         else:
                             pass  # TODO play sound for failing to place
@@ -513,8 +516,10 @@ class InGameScene(Scene):
         if ent_to_show is None:
             score_text = "Score: {}".format(self.score)
             screen.add_text((x, y), score_text, color=colors.LIGHT_GRAY, replace=True)
-            wave_text = "Kills: {}".format(self.get_kills())
-            screen.add_text((x, y + 1), wave_text, color=colors.LIGHT_GRAY, replace=True)
+            kill_text = "Kills: {}".format(self.get_kills())
+            screen.add_text((x, y + 1), kill_text, color=colors.LIGHT_GRAY, replace=True)
+            wave_text = "Wave:  {}".format(self._world.get_wave())
+            screen.add_text((x, y + 2), wave_text, color=colors.LIGHT_GRAY, replace=True)
 
             if not self.is_game_over():
                 instructions = [
