@@ -472,6 +472,9 @@ class EnemySpawnZone(worlds.Entity):
     def is_decoration(self):
         return True
 
+    def is_spawn_zone(self):
+        return True
+
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 0

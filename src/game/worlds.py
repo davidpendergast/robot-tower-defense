@@ -98,8 +98,20 @@ class World:
             if entity in self._caches[cache_key][1]:
                 del self._caches[cache_key][1][entity]
 
+    def can_build_at(self, entity, xy):
+        for e in self.all_entities_in_cell(xy):
+            if e.get_solidity() != 0:
+                return False
+            elif e.is_build_marker():
+                return False
+            elif e.is_spawn_zone():
+                return False
+            elif e.is_tower():
+                return False
+        return True
+
     def request_build_at(self, entity, xy):
-        if self.get_solidity(xy) == 0:
+        if self.can_build_at(entity, xy):
             import src.game.units as units
             print("INFO: requested to build {} at {}".format(entity, xy))
             self.set_pos(units.BuildNewMarker(entity), xy)
@@ -218,8 +230,8 @@ class World:
                     for d in decs:
                         d.draw((pos[0] + x, pos[0] + y), screen, mode=state.get_view_mode())
 
-    def draw_tower_range(self, tower, screen, pos):
-        xy = self.get_pos(tower)
+    def draw_tower_range(self, tower, screen, offs, xy=None):
+        xy = self.get_pos(tower) if xy is None else xy
         r = tower.get_stat_value(StatTypes.RANGE)
         color = util.Utils.linear_interp(tower.get_base_color(), colors.BLACK, 0.5)
         for n in self.all_cells_in_range(xy, r):
@@ -228,7 +240,7 @@ class World:
                 dont_draw = True
                 break
             if not dont_draw:
-                screen.add((pos[0] + n[0], pos[0] + n[1]), "░", color=color)
+                screen.add((offs[0] + n[0], offs[0] + n[1]), "░", color=color)
 
 
 _ENTITY_ID_COUNTER = 0
@@ -481,6 +493,9 @@ class Entity:
         return self.get_hp() <= 0
 
     def is_decoration(self):
+        return False
+
+    def is_spawn_zone(self):
         return False
 
     def is_heart(self):

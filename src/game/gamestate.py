@@ -504,8 +504,30 @@ class InGameScene(Scene):
             b.draw(screen)
 
     def _draw_overlays(self, screen):
+        if self.selected_entity is not None:
+            if self.selected_entity[1] == "world":
+                # highlight object in
+                xy = self._world.get_pos(self.selected_entity[0])
+                if xy is not None:
+                    border = textutils.ascii_rect((3, 3), color=colors.BRIGHT_RED, style=textutils.SINGLE)
+                    screen.add_text((xy[0] - self._world_rect[0] + 1,
+                                     xy[1] - self._world_rect[1] + 1), border,
+                                    replace=True, ignore=" ")
+            elif self.selected_entity[1] == "shop":
+                mouse_xy = self.state.get_mouse_pos()
+                if mouse_xy is not None:
+                    world_xy = self.get_pos_in_world(mouse_xy)
+                    if world_xy is not None:
+                        ent = self.selected_entity[0]
+                        if self._world.can_build_at(ent, world_xy):
+                            if ent.is_attack_tower() and self.should_draw_tower_range(ent):
+                                offs = (self._world_rect[0], self._world_rect[1])
+                                self._world.draw_tower_range(ent, screen, offs, xy=world_xy)
+                            screen.add(mouse_xy, ent.get_char(), color=ent.get_color(), replace=True)
+
+        pulse = (self.state.scene_ticks // 15 % 2) == 0
         center_text = self.get_center_message()
-        if center_text is not None and (self.state.scene_ticks // 15 % 2) == 0:
+        if center_text is not None and pulse:
             lines = center_text.count("\n") + 1
             pos = (self._world_rect[0] + (self._world_rect[2] - len(center_text)) // 2,
                    self._world_rect[1] + (self._world_rect[3] - lines) // 2)
