@@ -292,8 +292,12 @@ class InGameScene(Scene):
         self._paused = False
         self._playback_speed = 0  # larger = slower
 
-        self.wave = 0
+        self._show_ranges = False
+        self._show_hp = False
+
+        self.wave = 0  # not used RIP
         self.wave_prog = 0
+        self.kills = 0
 
         self.cash = 600
         self.stones = 20
@@ -309,8 +313,22 @@ class InGameScene(Scene):
         self.hovered_button = None
         self.buttons = self._build_buttons()
 
+    def get_mouse_pos_in_world(self):
+        mouse_xy = self.state.get_mouse_pos()
+        if mouse_xy is not None:
+            return self.get_pos_in_world(mouse_xy)
+        else:
+            return None
+
     def should_draw_tower_range(self, tower):
-        return True
+        if self._show_ranges:
+            return True
+        else:
+            xy = self._world.get_pos(tower)
+            mouse_xy = self.get_mouse_pos_in_world()
+            if xy is not None and xy == mouse_xy:
+                return True
+        return False
 
     def is_game_over(self):
         return self._world.is_game_over()
@@ -370,6 +388,10 @@ class InGameScene(Scene):
             self.increment_playback_speed()
         if (self.is_paused() or self.is_game_over()) and inputs.get_instance().was_pressed(pygame.K_ESCAPE):
             self.state.set_next_scene(TitleScene(self.state))
+        if inputs.get_instance().was_pressed(pygame.K_r):
+            self._show_ranges = not self._show_ranges
+        if inputs.get_instance().was_pressed(pygame.K_h):
+            self._show_hp = not self._show_hp
 
         mouse_xy = self.state.get_mouse_pos()
         old_hover_button = self.hovered_button
@@ -474,6 +496,9 @@ class InGameScene(Scene):
     def get_wave(self):
         return self.wave
 
+    def get_kills(self):
+        return self.kills
+
     def get_wave_prog(self):
         return self.wave_prog
 
@@ -488,8 +513,20 @@ class InGameScene(Scene):
         if ent_to_show is None:
             score_text = "Score: {}".format(self.score)
             screen.add_text((x, y), score_text, color=colors.LIGHT_GRAY, replace=True)
-            wave_text = "Wave {}".format(self.get_wave() + 1)
+            wave_text = "Kills: {}".format(self.get_kills())
             screen.add_text((x, y + 1), wave_text, color=colors.LIGHT_GRAY, replace=True)
+
+            if not self.is_game_over():
+                instructions = [
+                    " [Space] to Pause " if not self._paused else "[Space] to Unpause",
+                    "[R] to show Ranges" if not self._show_ranges else "[R] to hide Ranges",
+                    "[H] to show Health" if not self._show_hp else "[H] to hide Health",
+                    "[Right-Click] to cancel a purchase    "
+                ]
+                for i in range(0, len(instructions)):
+                    screen.add_text((x + w - len(instructions[i]), y + i), instructions[i], color=colors.DARK_GRAY,
+                                    replace=True)
+
         else:
             text = ent_to_show[0].get_info_text(w, in_world=ent_to_show[1] == "world")
             screen.add_text((x, y), text, replace=True)
@@ -520,7 +557,7 @@ class InGameScene(Scene):
                     if world_xy is not None:
                         ent = self.selected_entity[0]
                         if self._world.can_build_at(ent, world_xy):
-                            if ent.is_attack_tower() and self.should_draw_tower_range(ent):
+                            if ent.is_attack_tower():
                                 offs = (self._world_rect[0], self._world_rect[1])
                                 self._world.draw_tower_range(ent, screen, offs, xy=world_xy)
                             screen.add(mouse_xy, ent.get_char(), color=ent.get_color(), replace=True)
@@ -543,7 +580,10 @@ class InGameScene(Scene):
         self._draw_overlays(screen)
 
     def get_view_mode(self):
-        return worlds.ViewModes.NORMAL
+        if self._show_hp:
+            return worlds.ViewModes.SHOW_HP
+        else:
+            return worlds.ViewModes.NORMAL
 
     def get_border_color(self):
         return colors.DARK_GRAY

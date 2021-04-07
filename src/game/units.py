@@ -459,6 +459,8 @@ class Enemy(Agent):
         if direct_reward > 0:
             scene.score_item(GoldIngot(direct_reward))
 
+        scene.kills += 1
+
     def is_enemy(self):
         return True
 
