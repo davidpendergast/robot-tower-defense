@@ -124,9 +124,24 @@ class World:
             import src.game.units as units
             print("INFO: requested to build {} at {}".format(entity, xy))
             self.set_pos(units.BuildNewMarker(entity), xy)
-            self.refresh_enemy_paths = True
             return True
         return False
+
+    def request_upgrade_at(self, old_tower, new_tower):
+        xy = self.get_pos(old_tower)
+        if xy is not None:
+            import src.game.units as units
+            print("INFO: requested to upgrade {} at {}".format(old_tower, xy))
+            self.set_pos(units.UpgradeMarker(old_tower, new_tower), xy)
+            return True
+        return False
+
+    def request_sell_at(self, ent, price):
+        xy = self.get_pos(ent)
+        if xy is not None:
+            import src.game.units as units
+            print("INFO: requested to sell {} for {}".format(ent, price))
+            self.set_pos(units.SellMarker(ent, price), xy)
 
     def all_hearts(self):
         for e in self._caches["hearts"][1]:
@@ -610,6 +625,7 @@ def generate_world(w, h, spawner):
 
     res.set_pos(units.BuildBotSpawner(), (w // 2 - 1, h // 2))
     res.set_pos(units.MineBotSpawner(), (w // 2 + 3, h // 2 - 2))
+    res.set_pos(units.ScavengerBotSpawner(), (w // 2 + 7, h // 2 + 1))
 
     for i in range(0, 7):
         pos = res.rand_cell()
@@ -617,17 +633,6 @@ def generate_world(w, h, spawner):
         while not res.can_build_at(rock_tower, pos):
             pos = res.rand_cell()
         res.set_pos(rock_tower, pos)
-
-    #for i in range(0, 3):
-    #    res.set_pos(units.GoldOreTower(), res.rand_cell())
-
-    #for _ in range(0, 2):
-    #    for tower_provider in units.get_towers_in_shop():
-    #        if tower_provider is not None:
-    #            tower = tower_provider()
-    #            res.set_pos(tower, res.rand_cell())
-    #            for upgrade in tower.get_upgrades():
-    #                res.set_pos(upgrade, res.rand_cell())
 
     return res
 

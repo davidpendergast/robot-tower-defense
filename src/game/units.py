@@ -55,6 +55,7 @@ class HeartTower(Tower):
         res[worlds.StatTypes.REPAIRABLE] = 0
         res[worlds.StatTypes.HP] = 100
         res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.SELL_PRICE] = -1
         return res
 
     def is_heart(self):
@@ -690,15 +691,15 @@ class BuildNewMarker(BuildMarker):
 
 class SellMarker(BuildMarker):
 
-    def __init__(self, target):
+    def __init__(self, target, price):
         super().__init__(target)
+        self.price = price
 
     def get_marker_symbol(self):
         return "$"
 
     def perform_action(self, world, state):
-        gold_reward = self.target.get_sell_price()
-        state.cash += gold_reward
+        state.cash += self.price
         world.remove(self.target)
         world.remove(self)
         # TODO sound for selling

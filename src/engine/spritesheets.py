@@ -61,17 +61,17 @@ class DefaultFont(SpriteSheet, FontCharacterSpriteLookup):
                              "└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀" + \
                              "αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ "
 
-        self._char_mappings = {
-            "→": chr(16),
-            "←": chr(17),
-            "↑": chr(24),
-            "↓": chr(25)
-        }
+        #self._char_mappings = {
+        #    "→": chr(16),
+        #    "←": chr(17),
+        #    "↑": chr(24),
+        #    "↓": chr(25)
+        #}
 
     def get_char(self, c):
         """returns: an ImageSprite for the character c, or None if one isn't defined."""
-        if c in self._char_mappings:
-            c = self._char_mappings[c]
+        #if c in self._char_mappings:
+        #    c = self._char_mappings[c]
 
         if c in self._sprite_lookup:
             return self._sprite_lookup[c]

@@ -1,0 +1,12 @@
+[x] upgrade towers
+[x] selling towers
+[ ] cancelling build markers
+[ ] slowing / weakness / poison towers
+[ ] entities flash while carrying a thing
+[ ] button to speed up game 2x and 4x
+[ ] sounds
+[ ] song
+[ ] create itch page
+
+[Upgrade] [Sell] [ Pause ] [1x] [HP√] [Ranges√] 
+

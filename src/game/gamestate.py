@@ -207,8 +207,12 @@ class Button:
     def contains(self, xy):
         return utils.Utils.rect_contains(self.rect, xy)
 
+    def get_text_to_draw(self):
+        return "Button"
+
     def draw(self, screen):
-        pass
+        if self.is_active():
+            screen.add_text((self.rect[0], self.rect[1]), self.get_text_to_draw(), replace=True, ignore="")
 
     def is_hovered(self):
         return self.scene.hovered_button is self
@@ -282,6 +286,93 @@ class ShopButton(Button):
         return (self._tower_provider(), "shop")
 
 
+class PauseButton(Button):
+    def __init__(self, xy, scene):
+        self.pause_text = "[Pause]"
+        self.unpause_text = "[Play]"
+        super().__init__(scene, [xy[0], xy[1], len(self.pause_text), 1])
+
+    def get_text_to_draw(self):
+        color = colors.MID_GRAY
+        if self.is_hovered():
+            color = colors.WHITE
+
+        tb = sprites.TextBuilder()
+        if self.scene.is_paused():
+            tb.add(self.unpause_text, color=color)
+        else:
+            tb.add(self.pause_text, color=color)
+        return tb
+
+    def on_click(self):
+        self.scene.toggle_paused()
+
+
+class UpgradeButton(Button):
+
+    def __init__(self, xy, scene):
+        self.text = "[Upgrade]"
+        super().__init__(scene, [xy[0], xy[1], len(self.text), 1])
+
+    def is_active(self):
+        return self.scene.can_upgrade_selected_tower()
+
+    def get_text_to_draw(self):
+        color = colors.MID_GRAY
+        if self.is_hovered() and self.scene.selected_entity is not None:
+            color = self.scene.selected_entity[0].get_base_color()
+
+        tb = sprites.TextBuilder()
+        tb.add(self.text, color=color)
+        return tb
+
+    def on_click(self):
+        self.scene.upgrade_selected_tower()
+
+
+class ToggleSpeedButton(Button):
+
+    def __init__(self, xy, scene):
+        super().__init__(scene, [xy[0], xy[1], 5, 1])
+        self.texts = ["[ > ]", "[ >>]", "[>>>]"]
+
+    def get_text_to_draw(self):
+        color = colors.MID_GRAY
+        if self.is_hovered():
+            color = colors.WHITE
+
+        txt = self.texts[self.scene.game_speed % len(self.texts)]
+
+        tb = sprites.TextBuilder()
+        tb.add(txt, color=color)
+        return tb
+
+    def on_click(self):
+        self.scene.toggle_game_speed()
+
+
+class SellButton(Button):
+
+    def __init__(self, xy, scene):
+        self.text = "[Sell]"
+        super().__init__(scene, [xy[0], xy[1], len(self.text), 1])
+
+    def is_active(self):
+        return self.scene.can_sell_selected_tower()
+
+    def get_text_to_draw(self):
+        color = colors.MID_GRAY
+        if self.is_hovered():
+            color = colors.YELLOW
+
+        tb = sprites.TextBuilder()
+        tb.add(self.text, color=color)
+        return tb
+
+    def on_click(self):
+        self.scene.sell_selected_tower()
+
+
 class InGameScene(Scene):
 
     def __init__(self, state):
@@ -290,7 +381,7 @@ class InGameScene(Scene):
         self.info_rect = [0, const.H - 6, const.W - self.shop_rect[2], 6]
 
         self._paused = False
-        self._playback_speed = 0  # larger = slower
+        self.game_speed = 0
 
         self._show_ranges = False
         self._show_hp = False
@@ -352,6 +443,18 @@ class InGameScene(Scene):
             if t_provider is not None:
                 res.append(ShopButton(t_provider, self, [x, y, w, 1]))
             y += 1
+
+        y = const.H - self.info_rect[3]
+        xpos = 1
+        res.append(PauseButton((xpos, y), self))
+        xpos += res[-1].rect[2] + 6
+        res.append(UpgradeButton((xpos, y), self))
+        xpos += res[-1].rect[2] + 1
+        res.append(SellButton((xpos, y), self))
+        xpos += res[-1].rect[2]
+
+        res.append(ToggleSpeedButton((self.info_rect[0] + self.info_rect[2] - 5, y), self))
+
         return res
 
     def get_active_buttons(self):
@@ -366,11 +469,14 @@ class InGameScene(Scene):
     def toggle_paused(self):
         self.set_paused(not self.is_paused())
 
-    def should_skip_this_frame(self):
-        return self.state.scene_ticks % (1 + self._playback_speed) != 0
+    def toggle_game_speed(self):
+        self.game_speed = (self.game_speed + 1) % 3
 
-    def increment_playback_speed(self):
-        self._playback_speed = (self._playback_speed + 1) % 3
+    def should_skip_this_frame(self):
+        return False # self.state.scene_ticks % (1 + self._playback_speed) != 0
+
+    #def increment_playback_speed(self):
+    #    self._playback_speed = (self._playback_speed + 1) % 3
 
     def score_item(self, ent):
         if ent.is_stone_item():
@@ -382,11 +488,58 @@ class InGameScene(Scene):
             self.score += ent.get_sell_price()
             # TODO play sound for scoring gold
 
+    def can_upgrade_selected_tower(self):
+        if self.selected_entity is not None and self.selected_entity[1] == "world":
+            ent = self.selected_entity[0]
+            xy = self._world.get_pos(ent)
+            if xy is not None:
+                for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
+                    return False
+            upgrades = ent.get_upgrades()
+            if len(upgrades) > 0:
+                upgrade = upgrades[0]
+                gold_cost = upgrade.get_gold_cost()
+                return gold_cost <= self.cash
+            else:
+                return False
+
+    def upgrade_selected_tower(self):
+        if self.can_upgrade_selected_tower():
+            ent = self.selected_entity[0]
+            upgrade = ent.get_upgrades()[0]
+            gold_cost = upgrade.get_gold_cost()
+            if self._world.request_upgrade_at(ent, upgrade):
+                self.cash -= gold_cost
+                self.set_selected(None)
+                # TODO sound for upgrading
+
+    def can_sell_selected_tower(self):
+        if self.selected_entity is not None and self.selected_entity[1] == "world":
+            ent = self.selected_entity[0]
+            xy = self._world.get_pos(ent)
+            if xy is not None:
+                for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
+                    return False
+            p = ent.get_sell_price()
+            if p >= 0:
+                return True
+        return False
+
+    def sell_selected_tower(self):
+        if self.can_sell_selected_tower():
+            ent = self.selected_entity[0]
+            p = ent.get_sell_price()
+            if self._world.request_sell_at(ent, p):
+                # gold is delivered when sale actually happens
+                # TODO sound for selling
+                self.set_selected(None)
+                pass
+
     def update(self):
         if inputs.get_instance().was_pressed(pygame.K_SPACE):
             self.toggle_paused()
         if inputs.get_instance().was_pressed(pygame.K_TAB):
-            self.increment_playback_speed()
+            self.toggle_game_speed()
         if (self.is_paused() or self.is_game_over()) and inputs.get_instance().was_pressed(pygame.K_ESCAPE):
             self.state.set_next_scene(TitleScene(self.state))
         if inputs.get_instance().was_pressed(pygame.K_r):
@@ -408,7 +561,15 @@ class InGameScene(Scene):
             # TODO play sound for hovering over a button
             pass
 
-        self._world.update_all(self)
+        # hack becase game is too slow
+        gs_to_n_updates = {0: 1, 1: 2, 2: 5}
+        for _ in range(0, gs_to_n_updates[self.game_speed % 3]):
+            self._world.update_all(self)
+
+        if self.selected_entity is not None:
+            if self.selected_entity[1] == "world" and self._world.get_pos(self.selected_entity[0]) is None:
+                # selected tower was removed; deselect it
+                self.set_selected(None)
 
     def get_pos_in_world(self, xy):
         if utils.Utils.rect_contains(self._world_rect, xy):
@@ -514,18 +675,18 @@ class InGameScene(Scene):
             ent_to_show = self.hovered_entity
 
         if ent_to_show is None:
-            score_text = "Score: {}".format(self.score)
-            screen.add_text((x, y), score_text, color=colors.LIGHT_GRAY, replace=True)
-            kill_text = "Kills: {}".format(self.get_kills())
-            screen.add_text((x, y + 1), kill_text, color=colors.LIGHT_GRAY, replace=True)
             wave_text = "Wave:  {}".format(self._world.get_wave())
-            screen.add_text((x, y + 2), wave_text, color=colors.LIGHT_GRAY, replace=True)
+            screen.add_text((x + 1, y), wave_text, color=colors.LIGHT_GRAY, replace=True)
+            score_text = "Score: {}".format(self.score)
+            screen.add_text((x + 1, y + 1), score_text, color=colors.LIGHT_GRAY, replace=True)
+            kill_text = "Kills: {}".format(self.get_kills())
+            screen.add_text((x + 1, y + 2), kill_text, color=colors.LIGHT_GRAY, replace=True)
 
             if not self.is_game_over():
                 instructions = [
-                    " [Space] to Pause " if not self._paused else "[Space] to Unpause",
                     "[R] to show Ranges" if not self._show_ranges else "[R] to hide Ranges",
                     "[H] to show Health" if not self._show_hp else "[H] to hide Health",
+                    "",
                     "[Right-Click] to cancel a purchase    "
                 ]
                 for i in range(0, len(instructions)):
@@ -577,12 +738,11 @@ class InGameScene(Scene):
 
     def draw(self, screen):
         self._world.draw(screen, (1, 1), self)
-        self._draw_borders(screen)
         self._draw_shop(screen)
         self._draw_info_text(screen)
-        self._draw_buttons(screen)
-
         self._draw_overlays(screen)
+        self._draw_borders(screen)
+        self._draw_buttons(screen)
 
     def get_view_mode(self):
         if self._show_hp:
