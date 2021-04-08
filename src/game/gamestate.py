@@ -136,7 +136,7 @@ class TitleScene(Scene):
         for x in range(0, const.W):
             for y in range(0, const.H):
                 d = math.sqrt((cx - x) * (cx - x) + (cy - y) * (cy - y) * 2)
-                if d < 20:
+                if d < 16:
                     self.ascii_buffer[y * const.W + x] = None
                 elif random.random() < 1 / (configs.target_fps * 2):
                     if random.random() > d / 300:
@@ -147,7 +147,7 @@ class TitleScene(Scene):
                     c, color = self.ascii_buffer[y * const.W + x]
                     screen.add_text((x, y), c, color=color)
 
-        game_name = "ASCII Robot Tower Defense"
+        game_name = "   Automata Defense   "
         xy = ((const.W - len(game_name)) // 2, const.H // 2 - 1)
         msg = "Press Any Key to Start"
         xy2 = ((const.W - len(msg)) // 2, xy[1] + 1)
@@ -315,11 +315,11 @@ class UpgradeButton(Button):
         super().__init__(scene, [xy[0], xy[1], len(self.text), 1])
 
     def is_active(self):
-        return self.scene.can_upgrade_selected_tower()
+        return self.scene.can_upgrade_selected_tower(ignore_cost=True)
 
     def get_text_to_draw(self):
         color = colors.MID_GRAY
-        if self.is_hovered() and self.scene.selected_entity is not None:
+        if self.is_hovered() and self.scene.can_upgrade_selected_tower(ignore_cost=False):
             color = self.scene.selected_entity[0].get_base_color()
 
         tb = sprites.TextBuilder()
@@ -390,8 +390,8 @@ class InGameScene(Scene):
         self.wave_prog = 0
         self.kills = 0
 
-        self.cash = 6000 # 100
-        self.stones = 500# 5
+        self.cash = 100
+        self.stones = 5
         self.score = 0
 
         self._world = worlds.generate_world(const.W - self.shop_rect[2] - 1,
@@ -488,11 +488,11 @@ class InGameScene(Scene):
             self.score += ent.get_sell_price()
             # TODO play sound for scoring gold
 
-    def can_upgrade_selected_tower(self):
+    def can_upgrade_selected_tower(self, ignore_cost=False):
         if self.selected_entity is not None and self.selected_entity[1] == "world":
             ent = self.selected_entity[0]
             upgrade_cost = self.get_upgrade_cost(ent)
-            return upgrade_cost is not None and upgrade_cost <= self.cash
+            return upgrade_cost is not None and (ignore_cost or upgrade_cost <= self.cash)
         else:
             return False
 

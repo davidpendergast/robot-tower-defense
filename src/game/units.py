@@ -1158,7 +1158,8 @@ class EnemySpawnController:
         max_wave_delay = 8 * configs.target_fps
         end_of_wave_delay = int(util.Utils.linear_interp(max_wave_delay, min_pulse_delay, min(1.0, self.level / max_level)))
 
-        enemies = EnemyFactory.generate_random_enemies(difficulty, 3 + self.level // 3, n=n)
+        pts = int(3 + self.level / 3 + self.level * self.level / 150)
+        enemies = EnemyFactory.generate_random_enemies(difficulty, pts, n=n)
 
         print("INFO: Wave {} Enemy: {}".format(self.level, enemies[0].get_base_stats()))
 
