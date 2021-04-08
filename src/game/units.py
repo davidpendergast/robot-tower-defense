@@ -450,7 +450,7 @@ class Enemy(Agent):
             status_colors.append(colors.DARK_BLUE)
             self.set_stat_value(worlds.StatTypes.WEAKENED, max(0, self.get_stat_value(worlds.StatTypes.WEAKENED) - 1))
         if self.is_slowed():
-            status_colors.append(colors.DARK_YELLOW)
+            status_colors.append(colors.PURPLE)
             self.set_stat_value(worlds.StatTypes.SLOWED, max(0, self.get_stat_value(worlds.StatTypes.SLOWED) - 1))
         if self.is_poisoned():
             status_colors.append(colors.DARK_PURPLE)
@@ -566,7 +566,7 @@ class RockTower(Tower):
         res[worlds.StatTypes.HP] = 200
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.APS] = 1
-        res[worlds.StatTypes.STONE_PRICE] = 85
+        res[worlds.StatTypes.STONE_PRICE] = 20
         return res
 
     def get_upgrades(self):
@@ -602,7 +602,7 @@ class WallTower(Tower):
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.HP] = 250
         res[worlds.StatTypes.STONE_PRICE] = 15
-        res[worlds.StatTypes.BUY_PRICE] = 15
+        res[worlds.StatTypes.BUY_PRICE] = 10
         res[worlds.StatTypes.SELL_PRICE] = 0
         res[worlds.StatTypes.ARMOR] = 5
         return res
@@ -813,6 +813,56 @@ class GunTower(AttackTower):
         res[worlds.StatTypes.SOLIDITY] = 1
         return res
 
+    def get_upgrades(self):
+        return [GunTowerII()]
+
+
+class GunTowerII(AttackTower):
+
+    def __init__(self):
+        super().__init__("G", colors.LIGHT_BROWN, "Gun Tower II", "A tower that shoots enemies.")
+
+    def get_shop_icon(self):
+        return "Gun Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 225
+        res[worlds.StatTypes.SELL_PRICE] = 180
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 2.5
+        res[worlds.StatTypes.HP] = 75
+        res[worlds.StatTypes.DAMAGE] = 18
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
+    def get_upgrades(self):
+        return [GunTowerIII()]
+
+
+class GunTowerIII(AttackTower):
+
+    def __init__(self):
+        super().__init__("G", colors.CYAN, "Gun Tower III", "A strong tower that shoots enemies.")
+
+    def get_shop_icon(self):
+        return "Gun Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.BUY_PRICE] = 350
+        res[worlds.StatTypes.SELL_PRICE] = 225
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 2.7
+        res[worlds.StatTypes.HP] = 125
+        res[worlds.StatTypes.DAMAGE] = 23
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
 
 class WeaknessTower(AttackTower):
 
@@ -836,6 +886,63 @@ class WeaknessTower(AttackTower):
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.WEAKNESS_ON_HIT] = 10
         return res
+
+    def get_upgrades(self):
+        return [WeaknessTower2()]
+
+
+class WeaknessTower2(AttackTower):
+
+    def __init__(self):
+        super().__init__("W", colors.LIGHT_BLUE, "Weakness Tower II",
+                         "A tower that weakens enemies and makes them\ntake more damage.")
+
+    def get_shop_icon(self):
+        return "Weak Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.BUY_PRICE] = 250
+        res[worlds.StatTypes.SELL_PRICE] = 150
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 1.75
+        res[worlds.StatTypes.HP] = 125
+        res[worlds.StatTypes.DAMAGE] = 10
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.WEAKNESS_ON_HIT] = 15
+        return res
+
+    def get_upgrades(self):
+        return [WeaknessTower3()]
+
+
+class WeaknessTower3(AttackTower):
+
+    def __init__(self):
+        super().__init__("W", colors.CYAN, "Weakness Tower III",
+                         "A tower that weakens enemies and makes them\ntake more damage.")
+
+    def get_shop_icon(self):
+        return "Weak Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.BUY_PRICE] = 450
+        res[worlds.StatTypes.SELL_PRICE] = 250
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 2.25
+        res[worlds.StatTypes.HP] = 175
+        res[worlds.StatTypes.DAMAGE] = 18
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.WEAKNESS_ON_HIT] = 25
+        return res
+
+    def get_upgrades(self):
+        return []
 
 
 class SlowTower(AttackTower):
@@ -886,6 +993,34 @@ class PoisonTower(AttackTower):
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
         res[worlds.StatTypes.POISON_ON_HIT] = 10
+        res[worlds.StatTypes.SLOWNESS_ON_HIT] = 5
+        return res
+
+    def get_upgrades(self):
+        return [BlightTower()]
+
+
+class BlightTower(AttackTower):
+    def __init__(self):
+        super().__init__("B", colors.CYAN, "Blight Tower",
+                         "A tower that poisons and slows enemies.")
+
+    def get_shop_icon(self):
+        return "Blgt Twr"
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.BUY_PRICE] = 650
+        res[worlds.StatTypes.SELL_PRICE] = 300
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 2.5
+        res[worlds.StatTypes.HP] = 150
+        res[worlds.StatTypes.DAMAGE] = 12
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.POISON_ON_HIT] = 15
+        res[worlds.StatTypes.SLOWNESS_ON_HIT] = 20
         return res
 
 
@@ -910,6 +1045,64 @@ class ExplosionTower(AttackTower):
         res[worlds.StatTypes.APS] = 1.2
         res[worlds.StatTypes.HP] = 65
         res[worlds.StatTypes.DAMAGE] = 10
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
+    def get_upgrades(self):
+        return [ExplosionTowerII()]
+
+
+class ExplosionTowerII(AttackTower):
+
+    def __init__(self):
+        super().__init__("E", colors.LIGHT_ORANGE, "Explosion Tower II",
+                         "A tower that deals damage to all enemies\nwithin its radius.")
+
+    def get_shop_icon(self):
+        return "Expl Twr"
+
+    def get_enemies_to_hit(self, world, scene):
+        return self.get_enemies_in_range(world)
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 3
+        res[worlds.StatTypes.BUY_PRICE] = 170
+        res[worlds.StatTypes.SELL_PRICE] = 120
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 1.4
+        res[worlds.StatTypes.HP] = 110
+        res[worlds.StatTypes.DAMAGE] = 16
+        res[worlds.StatTypes.ARMOR] = 0
+        res[worlds.StatTypes.SOLIDITY] = 1
+        return res
+
+    def get_upgrades(self):
+        return [ExplosionTowerIII()]
+
+
+class ExplosionTowerIII(AttackTower):
+
+    def __init__(self):
+        super().__init__("E", colors.CYAN, "Explosion Tower III",
+                         "A tower that deals damage to all enemies\nwithin its radius.")
+
+    def get_shop_icon(self):
+        return "Expl Twr"
+
+    def get_enemies_to_hit(self, world, scene):
+        return self.get_enemies_in_range(world)
+
+    def get_base_stats(self):
+        res = super().get_base_stats()
+        res[worlds.StatTypes.RANGE] = 4
+        res[worlds.StatTypes.BUY_PRICE] = 450
+        res[worlds.StatTypes.SELL_PRICE] = 200
+        res[worlds.StatTypes.STONE_PRICE] = 0
+        res[worlds.StatTypes.APS] = 1.6
+        res[worlds.StatTypes.HP] = 170
+        res[worlds.StatTypes.DAMAGE] = 20
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
         return res

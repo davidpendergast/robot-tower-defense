@@ -20,13 +20,16 @@ for r in c:
 
 RED = (1, 0.333, 0.333)
 ORANGE = (1, 0.666, 0)
+LIGHT_ORANGE = (1, 0.75, 0.333)
 YELLOW = (1, 1, 0.333)
 GREEN = (0.333, 1, 0.333)
 BLUE = (0.333, 0.333, 1)
 PURPLE = (1, 0.333, 1)
 CYAN = (0.333, 1, 1)
 BROWN = (0.666, 0.5, 0.333)
+LIGHT_BROWN = (0.75, 0.666, 0.5)
 
+LIGHT_BLUE = (0.666, 0.666, 1)
 BRIGHT_RED = (1, 0, 0)
 DARK_RED = (0.666, 0, 0)
 DARK_YELLOW = (0.666, 0.666, 0)
