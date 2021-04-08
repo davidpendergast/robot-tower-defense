@@ -491,17 +491,25 @@ class InGameScene(Scene):
     def can_upgrade_selected_tower(self):
         if self.selected_entity is not None and self.selected_entity[1] == "world":
             ent = self.selected_entity[0]
-            xy = self._world.get_pos(ent)
-            if xy is not None:
-                for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
-                    return False
-            upgrades = ent.get_upgrades()
-            if len(upgrades) > 0:
-                upgrade = upgrades[0]
-                gold_cost = upgrade.get_gold_cost()
-                return gold_cost <= self.cash
-            else:
-                return False
+            upgrade_cost = self.get_upgrade_cost(ent)
+            return upgrade_cost is not None and upgrade_cost <= self.cash
+        else:
+            return False
+
+    def get_upgrade_cost(self, ent):
+        if ent is None:
+            return None
+        xy = self._world.get_pos(ent)
+        if xy is not None:
+            for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
+                return None
+        upgrades = ent.get_upgrades()
+        if len(upgrades) > 0:
+            upgrade = upgrades[0]
+            gold_cost = upgrade.get_gold_cost()
+            return gold_cost
+        else:
+            return None
 
     def upgrade_selected_tower(self):
         if self.can_upgrade_selected_tower():
@@ -516,14 +524,22 @@ class InGameScene(Scene):
     def can_sell_selected_tower(self):
         if self.selected_entity is not None and self.selected_entity[1] == "world":
             ent = self.selected_entity[0]
-            xy = self._world.get_pos(ent)
-            if xy is not None:
-                for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
-                    return False
-            p = ent.get_sell_price()
-            if p >= 0:
-                return True
-        return False
+            return self.get_sell_price(ent) is not None
+        else:
+            return False
+
+    def get_sell_price(self, ent):
+        if ent is None:
+            return None
+        xy = self._world.get_pos(ent)
+        if xy is not None:
+            for _ in self._world.all_entities_in_cell(xy, cond=lambda x: x.is_build_marker()):
+                return None
+        p = ent.get_sell_price()
+        if p >= 0:
+            return p
+        else:
+            return None
 
     def sell_selected_tower(self):
         if self.can_sell_selected_tower():
@@ -696,10 +712,10 @@ class InGameScene(Scene):
             ent_to_show = self.hovered_entity
 
         if ent_to_show is None:
-            wave_text = "Wave:  {}".format(self._world.get_wave())
-            screen.add_text((x + 1, y), wave_text, color=colors.LIGHT_GRAY, replace=True)
             score_text = "Score: {}".format(self.score)
-            screen.add_text((x + 1, y + 1), score_text, color=colors.LIGHT_GRAY, replace=True)
+            screen.add_text((x + 1, y), score_text, color=colors.LIGHT_GRAY, replace=True)
+            wave_text = "Wave:  {}".format(self._world.get_wave())
+            screen.add_text((x + 1, y + 1), wave_text, color=colors.LIGHT_GRAY, replace=True)
             kill_text = "Kills: {}".format(self.get_kills())
             screen.add_text((x + 1, y + 2), kill_text, color=colors.LIGHT_GRAY, replace=True)
 
@@ -717,6 +733,20 @@ class InGameScene(Scene):
         else:
             text = ent_to_show[0].get_info_text(w, in_world=ent_to_show[1] == "world")
             screen.add_text((x, y), text, replace=True)
+
+            if ent_to_show[0].is_tower() and ent_to_show[1] == "world" and not self.is_game_over():
+                if self.hovered_button is not None and self.hovered_button.is_active():
+                    txt = sprites.TextBuilder()
+                    if isinstance(self.hovered_button, UpgradeButton):
+                        upgrade_price = self.get_upgrade_cost(ent_to_show[0])
+                        txt.add("Upgrade for ", color=colors.LIGHT_GRAY if self.cash >= upgrade_price else colors.DARK_GRAY)
+                        txt.add("${}".format(upgrade_price), color=colors.YELLOW if self.cash >= upgrade_price else colors.DARK_GRAY)
+                    elif isinstance(self.hovered_button, SellButton):
+                        sell_price = self.get_sell_price(ent_to_show[0])
+                        txt.add("Sell for ", color=colors.LIGHT_GRAY)
+                        txt.add("${}".format(sell_price), color=colors.YELLOW)
+                    ex = x + (w - len(txt.text)) // 2
+                    screen.add_text((ex, y + 3), txt)
 
         if self.is_game_over():
             esc_text = "Press [Escape] to Quit"
