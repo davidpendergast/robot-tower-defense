@@ -2,7 +2,7 @@
 import os.path
 import src.game.const as const
 
-name_of_game = "Robot Tower Defense"
+name_of_game = "Automata Defense"
 version = "1.0.0"
 
 
