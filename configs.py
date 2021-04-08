@@ -3,7 +3,7 @@ import os.path
 import src.game.const as const
 
 name_of_game = "Automata Defense"
-version = "1.0.0"
+version = "1.0.1"
 
 
 """ Display """

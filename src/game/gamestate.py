@@ -585,6 +585,10 @@ class InGameScene(Scene):
         for _ in range(0, gs_to_n_updates[self.game_speed % 3]):
             self._world.update_all(self)
 
+        if self.is_game_over():
+            # otherwise you can't see your score
+            self.set_selected(None)
+
         if self.selected_entity is not None:
             if self.selected_entity[1] == "world" and self._world.get_pos(self.selected_entity[0]) is None:
                 # selected tower was removed; deselect it
