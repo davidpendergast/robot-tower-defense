@@ -557,6 +557,9 @@ class InGameScene(Scene):
             self.hovered_entity = self.get_entity_at_screen_pos(mouse_xy)
             if inputs.get_instance().mouse_was_pressed(1):
                 self.handle_click(mouse_xy)
+            elif inputs.get_instance().mouse_was_pressed(3):
+                self.handle_right_click(mouse_xy)
+
         if old_hover_button is not self.hovered_button:
             # TODO play sound for hovering over a button
             pass
@@ -615,12 +618,30 @@ class InGameScene(Scene):
                         # we're currently trying to buy something, and we clicked in world
                         stone_cost = self.selected_entity[0].get_stone_cost(self._world)
                         gold_cost = self.selected_entity[0].get_gold_cost()
-                        if self._world.request_build_at(self.selected_entity[0], world_xy):
+                        if self._world.request_build_at(self.selected_entity[0], world_xy, gold_cost, stone_cost):
                             self.cash -= gold_cost
                             self.stones -= stone_cost
                             self.set_selected(None)
                         else:
                             pass  # TODO play sound for failing to place
+
+    def handle_right_click(self, xy):
+        if self.is_game_over():
+            pass  # ya done
+        else:
+            if self.selected_entity is not None:
+                self.set_selected(None)
+            world_xy = self.get_pos_in_world(xy)
+            if world_xy is not None:
+                es_to_rem = []
+                for e in self._world.all_entities_in_cell(world_xy, cond=lambda x: x.is_build_marker()):
+                    e.refund(self._world, self)
+                    es_to_rem.append(e)
+                for e in es_to_rem:
+                    self._world.remove(e)
+                if len(es_to_rem) > 0:
+                    pass # TODO play sound for cancelling a buy
+
 
     def get_entity_at_screen_pos(self, xy):
         world_xy = self.get_pos_in_world(xy)

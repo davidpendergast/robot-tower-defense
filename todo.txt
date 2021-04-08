@@ -3,7 +3,7 @@
 [ ] cancelling build markers
 [ ] slowing / weakness / poison towers
 [ ] entities flash while carrying a thing
-[ ] button to speed up game 2x and 4x
+[x] button to speed up game 2x and 4x
 [ ] sounds
 [ ] song
 [ ] create itch page

@@ -651,9 +651,11 @@ class BuildMarker(worlds.Entity):
 
 
 class BuildNewMarker(BuildMarker):
-    def __init__(self, target):
+    def __init__(self, target, gold_paid, stone_paid):
         super().__init__(target)
         self.scene_ticks = 0
+        self.gold_paid = gold_paid
+        self.stone_paid = stone_paid
 
     def is_new_build_marker(self):
         return True
@@ -669,10 +671,8 @@ class BuildNewMarker(BuildMarker):
         world.set_pos(self.target, xy)
 
     def refund(self, world, state):
-        gold_refund = self.target.get_gold_cost()
-        stone_refund = self.target.get_stone_cost(world)
-        state.cash += gold_refund
-        state.stone += stone_refund
+        state.cash += self.gold_paid
+        state.stones += self.stone_paid
         # TODO play sound for undoing a build command
 
     def update(self, world, state):
@@ -710,6 +710,10 @@ class UpgradeMarker(BuildMarker):
     def __init__(self, old_tower, new_tower):
         super().__init__(old_tower)
         self.new_tower = new_tower
+
+    def refund(self, world, state):
+        gold_refund = self.new_tower.get_gold_cost()
+        state.cash += gold_refund
 
     def get_marker_symbol(self):
         return "↑"

@@ -119,11 +119,11 @@ class World:
                 return False
         return True
 
-    def request_build_at(self, entity, xy):
+    def request_build_at(self, entity, xy, gold_paid, stone_paid):
         if self.can_build_at(entity, xy):
             import src.game.units as units
             print("INFO: requested to build {} at {}".format(entity, xy))
-            self.set_pos(units.BuildNewMarker(entity), xy)
+            self.set_pos(units.BuildNewMarker(entity, gold_paid, stone_paid), xy)
             return True
         return False
 
