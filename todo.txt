@@ -3,7 +3,7 @@
 [x] cancelling build markers
 [x] towers show upgrade / sell price
 [ ] slowing / weakness / poison towers
-[ ] entities flash while carrying a thing
+[x] entities flash while carrying a thing
 [x] button to speed up game 2x and 4x
 [ ] sounds
 [ ] song

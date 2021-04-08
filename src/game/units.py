@@ -445,6 +445,21 @@ class Enemy(Agent):
             else:
                 self.wander(world, state)
 
+        status_colors = []
+        if self.is_weakened():
+            status_colors.append(colors.DARK_BLUE)
+            self.set_stat_value(worlds.StatTypes.WEAKENED, max(0, self.get_stat_value(worlds.StatTypes.WEAKENED) - 1))
+        if self.is_slowed():
+            status_colors.append(colors.DARK_YELLOW)
+            self.set_stat_value(worlds.StatTypes.SLOWED, max(0, self.get_stat_value(worlds.StatTypes.SLOWED) - 1))
+        if self.is_poisoned():
+            status_colors.append(colors.DARK_PURPLE)
+            self.set_stat_value(worlds.StatTypes.POISONED, max(0, self.get_stat_value(worlds.StatTypes.POISONED) - 1))
+            self.take_damage_from(2, None)
+
+        if len(status_colors) > 0:
+            self.perturb_color(random.choice(status_colors), duration=30)
+
     def get_base_stats(self):
         res = {}
         for s in self._base_stats:
@@ -819,6 +834,7 @@ class WeaknessTower(AttackTower):
         res[worlds.StatTypes.DAMAGE] = 3
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.WEAKNESS_ON_HIT] = 10
         return res
 
 
@@ -845,6 +861,7 @@ class SlowTower(AttackTower):
         res[worlds.StatTypes.DAMAGE] = 5
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.SLOWNESS_ON_HIT] = 10
         return res
 
 
@@ -865,9 +882,10 @@ class PoisonTower(AttackTower):
         res[worlds.StatTypes.STONE_PRICE] = 0
         res[worlds.StatTypes.APS] = 2
         res[worlds.StatTypes.HP] = 100
-        res[worlds.StatTypes.DAMAGE] = 8
+        res[worlds.StatTypes.DAMAGE] = 3
         res[worlds.StatTypes.ARMOR] = 0
         res[worlds.StatTypes.SOLIDITY] = 1
+        res[worlds.StatTypes.POISON_ON_HIT] = 10
         return res
 
 

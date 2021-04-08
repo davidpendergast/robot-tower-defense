@@ -352,6 +352,14 @@ class StatTypes:
     AGGRESSION = StatType("Aggression", lambda v: "Aggression: {}".format(v), colors.RED, 0)
     DEATH_REWARD = StatType("Death Reward", lambda v: "Bounty: {}".format(v), colors.YELLOW, 0)
 
+    SLOWNESS_ON_HIT = StatType("Slowness on Hit", lambda v: "Slowness on Hit: {}".format(v), colors.DARK_GREEN, 0)
+    WEAKNESS_ON_HIT = StatType("Weakness on Hit", lambda v: "Weakness on Hit: {}".format(v), colors.DARK_BLUE, 0)
+    POISON_ON_HIT = StatType("Poison on Hit", lambda v: "Poison on Hit: {}".format(v), colors.DARK_PURPLE, 0)
+
+    SLOWED = StatType("Slowed", lambda v: "Slowed for {} turns".format(v), colors.DARK_GREEN, 0)
+    WEAKENED = StatType("Weaked", lambda v: "Weaked for {} turns".format(v), colors.DARK_BLUE, 0)
+    POISONED = StatType("Poised", lambda v: "asdf for {} turns".format(v), colors.DARK_PURPLE, 0)
+
 
 def make_stats(max_hp=None, actions_per_sec=None, damage=None, sell_price=None, cost=None):
     res = {}
@@ -414,7 +422,7 @@ class Entity:
         self.stats[stat_type] = val
 
     def ticks_per_action(self):
-        aps = self.get_stat_value(StatTypes.APS)
+        aps = self.get_stat_value(StatTypes.APS) * (0.666 if self.is_slowed() else 1)
         if aps <= 0:
             return 999
         else:
@@ -428,6 +436,15 @@ class Entity:
 
     def can_show_hp(self):
         return not self.is_enemy() and not self.is_decoration()
+
+    def is_weakened(self):
+        return self.get_stat_value(StatTypes.WEAKENED) > 0
+
+    def is_poisoned(self):
+        return self.get_stat_value(StatTypes.POISONED) > 0
+
+    def is_slowed(self):
+        return self.get_stat_value(StatTypes.SLOWED) > 0
 
     def get_base_color(self):
         return self.base_color
@@ -456,9 +473,14 @@ class Entity:
 
     def calc_damage_against(self, other):
         my_dmg = self.get_stat_value(StatTypes.DAMAGE)
+        if self.is_weakened():
+            my_dmg = my_dmg // 2
+
         my_dmg += self.get_stat_value(StatTypes.BONUS_DAMAGE)
 
         other_def = other.get_stat_value(StatTypes.ARMOR)
+        if other.is_weakened():
+            other_def = other_def // 2
 
         return max(0, my_dmg - other_def)
 
@@ -471,6 +493,15 @@ class Entity:
             self.set_hp(self.get_hp() + heal_amt)
             # TODO noise for healing
 
+            slow_dur = self.get_stat_value(StatTypes.SLOWNESS_ON_HIT)
+            weak_dur = self.get_stat_value(StatTypes.WEAKNESS_ON_HIT)
+            pois_dur = self.get_stat_value(StatTypes.POISON_ON_HIT)
+
+            other.set_stat_value(StatTypes.SLOWED, max(other.get_stat_value(StatTypes.SLOWED), slow_dur))
+            other.set_stat_value(StatTypes.WEAKENED, max(other.get_stat_value(StatTypes.WEAKENED), weak_dur))
+            other.set_stat_value(StatTypes.POISONED, max(other.get_stat_value(StatTypes.POISONED), pois_dur))
+            # TODO noise for status effects
+
         ramp = self.get_stat_value(StatTypes.RAMPAGE)
         self.stats[StatTypes.BONUS_DAMAGE] += ramp
 
@@ -480,7 +511,7 @@ class Entity:
             self.animate_damage_from(other)
 
     def animate_damage_from(self, other):
-        self.perturb_color(other.get_color(), 10)
+        self.perturb_color(other.get_color() if other is not None else colors.WHITE, 10)
         # TODO noise for taking damage
 
     def get_aggression_discount(self):
@@ -582,7 +613,7 @@ class Entity:
                 self._ticks_until_next_action -= 1
 
     def _calc_ticks_until_next_action(self):
-        aps = self.get_stat_value(StatTypes.APS)
+        aps = self.get_stat_value(StatTypes.APS) * (0.666 if self.is_slowed() else 1)
         if aps <= 0:
             return 999
         else:
