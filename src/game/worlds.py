@@ -593,9 +593,9 @@ class Entity:
     def act(self, world, state):
         pass
 
-    def draw(self, xy, screen: ascii_screen.AsciiScreen, mode=ViewModes.NORMAL):
+    def draw(self, xy, screen: ascii_screen.AsciiScreen, mode=None):
         character = self.get_char()
-        color = self.get_color(mode)
+        color = self.get_color(mode if mode is not None else ViewModes.NORMAL)
         screen.add(xy, character, color=color)
 
     def __hash__(self):

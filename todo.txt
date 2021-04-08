@@ -1,7 +1,7 @@
 [x] upgrade towers
 [x] selling towers
 [x] cancelling build markers
-[ ] towers show upgrade / sell price
+[x] towers show upgrade / sell price
 [ ] slowing / weakness / poison towers
 [ ] entities flash while carrying a thing
 [x] button to speed up game 2x and 4x

@@ -67,8 +67,9 @@ class RobotSpawner(Tower):
     def __init__(self, character, color, name, description, robot_producer):
         super().__init__(character, color, name, description)
         self.robot_producer = robot_producer
-        self._my_robot = robot_producer()
+        self._my_robot = None
         self.build_countup = 0
+        self.robots_produced = 0
 
     def get_base_stats(self):
         res = super().get_base_stats()
@@ -90,14 +91,12 @@ class RobotSpawner(Tower):
         if self._my_robot is None or self._my_robot.is_dead() or world.get_pos(self._my_robot) is None:
             self.build_countup += 1
             ticks_per_build = self.ticks_per_action()
-            if self.build_countup >= ticks_per_build:
+            if self.build_countup >= ticks_per_build or self.robots_produced == 0:
                 self._my_robot = self.robot_producer()
                 world.set_pos(self._my_robot, my_xy)
                 self.build_countup = 0
+                self.robots_produced += 1
                 # TODO play sound for building robot
-        elif self._my_robot not in world:
-            world.set_pos(self._my_robot, my_xy)
-            # TODO play sound for building robot
         else:
             robot_xy = world.get_pos(self._my_robot)
             if robot_xy == my_xy:
@@ -162,6 +161,8 @@ class Agent(worlds.Entity):
     def __init__(self, character, color, name, description):
         super().__init__(character, color, name, description)
 
+        self.carrying_item = None
+
     def get_base_stats(self):
         res = super().get_base_stats()
         res[worlds.StatTypes.SOLIDITY] = 0
@@ -180,6 +181,12 @@ class Agent(worlds.Entity):
     def act(self, world, state):
         self.wander(world, state)
 
+    def draw(self, xy, screen, mode=None):
+        super().draw(xy, screen, mode=mode)
+
+        if self.carrying_item is not None:
+            screen.add(xy, self.carrying_item.get_char(), color=self.carrying_item.get_color())
+
 
 class Robot(Agent):
 
@@ -187,8 +194,6 @@ class Robot(Agent):
         super().__init__(character, color, name, description)
         self.current_path = None
         self.charge = self.get_stat_value(worlds.StatTypes.MAX_CHARGE)
-
-        self.carrying_item = None
 
     def set_item_carrying(self, e):
         self.carrying_item = e
